@@ -51,6 +51,12 @@ ptssl -u htttps://www.example.com/
 ptlibs
 ```
 
+## External tools
+This tool requires [testssl.sh](https://testssl.sh) to be installed and available in your PATH.
+
+We would like to thank the author for their work on this excellent tool.
+
+
 ## License
 
 Copyright (c) 2025 Penterep Security s.r.o.
