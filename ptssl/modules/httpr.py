@@ -41,10 +41,10 @@ class HTTPR:
                 ptprint(f"HTTP redirect to HTTPS:   OK", "OK", not self.args.json, indent=4)
             elif response.status_code in [302, 303, 307]:
                 ptprint(f"HTTP redirect to HTTPS:   TEMPORARY (not fully secured)", "WARNING", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-HTTPSREDIRSC')
+                self.ptjsonlib.add_vulnerability(f'PTV-WEB-CRYPT-REDIRSC')
         else:
             ptprint(f"HTTP redirect to HTTPS:   no redirection", "VULN", not self.args.json, indent=4)
-            self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-HTTPSREDIR')
+            self.ptjsonlib.add_vulnerability(f'PTV-WEB-CRYPT-REDIR')
 
 
 def run(args, ptjsonlib, helpers, testssl_result):
