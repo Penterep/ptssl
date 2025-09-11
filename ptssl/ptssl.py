@@ -135,7 +135,8 @@ class PtSSL:
 
         if self.args.verbose:
             ptprint(f"Testssl is running, please wait:", "TITLE", not self.args.json, flush=True, clear_to_eol=True, colortext=True, end="")
-            sys.stdout.write("\033[?25l")  # Hide cursor
+            if not self.args.json:
+                sys.stdout.write("\033[?25l")  # Hide cursor
 
         else:
             stop_spinner = threading.Event()
@@ -175,7 +176,8 @@ class PtSSL:
             self.ptjsonlib.end_error("testssl.sh raised exception:", details=e, condition=self.args.json)
 
         finally:
-            sys.stdout.write("\033[?25h")  # Show cursor
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")  # Show cursor
             if not self.args.verbose:
                 stop_spinner.set()
                 spinner_thread.join()
