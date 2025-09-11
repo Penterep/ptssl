@@ -32,6 +32,22 @@ class HSTS:
         self.helpers = helpers
         self.testssl_result = testssl_result
 
+    def run(self) -> None:
+        """Run the HSTS module"""
+        ptprint(__TESTLABEL__, "TITLE", not self.args.json, colortext=True)
+        try:
+            response = self.helpers.http_client.send_request(self.args.url, allow_redirects=False)
+            print(response.headers)
+            hsts_header = response.headers.get("strict-transport-security", None)
+            if not hsts_header:
+                ptprint(f"HSTS  not offered", "VULN", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSMIS")
+            else:
+                ptprint(f"HSTS  offered", "OK", not self.args.json, indent=4)
+                self.parse_hsts_header(hsts_header)
+        except:
+            ptprint(f"Error retrieving response for HSTS test", "ERROR", not self.args.json, indent=4)
+
     def parse_hsts_header(self, header_value: str) -> None:
         """
         Parses the `Strict-Transport-Security` header value and extracts the components: `max-age`,
@@ -78,33 +94,16 @@ class HSTS:
         self.attribs["preload"] = bool(preload_pattern.search(header_value))
 
         if self.attribs["preload"]:
-            ptprint(f"preload offered", "VULN", not self.args.json, indent=4)
+            ptprint(f"preload offered", "OK", not self.args.json, indent=4)
         else:
             ptprint(f"preload attribute not offered", "VULN", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSPL")
 
         if self.attribs["includeSubDomains"]:
-            ptprint(f"includeSubdomains offered", "VULN", not self.args.json, indent=4)
+            ptprint(f"includeSubdomains offered", "OK", not self.args.json, indent=4)
         else:
             ptprint(f"includeSubdomains attribute not offered", "VULN", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSSD")
-
-    def run(self) -> None:
-        """Run the HSTS module"""
-        ptprint(__TESTLABEL__, "TITLE", not self.args.json, colortext=True)
-        try:
-            response = self.helpers.http_client.send_request(self.args.url, allow_redirects=False)
-        except:
-            ptprint(f"Error retrieving response for HSTS test", "ERROR", not self.args.json, indent=4)
-            return
-
-        hsts_header = response.headers.get("strict-transport-security", None)
-        if not hsts_header:
-            ptprint(f"HSTS  not offered", "VULN", not self.args.json, indent=4)
-            return
-        else:
-            ptprint(f"HSTS  offered", "OK", not self.args.json, indent=4)
-            self.parse_hsts_header(hsts_header)
 
 def run(args, ptjsonlib, helpers, testssl_result):
     """Entry point for running the HSTS module (HTTP Strict Transport Security Test)."""
