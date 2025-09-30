@@ -36,7 +36,8 @@ class TSD:
     CERT_KEY_SIZE = 1
     CERT_TRUST = 12
     CERT_CHAIN_OF_TRUST = 13
-    CERT_EXPIRATION = 17
+    CERT_NOT_BEFORE = 17
+    CERT_NOT_AFTER  = 18
     OCSP_STAPLING = 22
     CERT_TRANSPARENCY = 25
 
@@ -71,35 +72,30 @@ class TSD:
             return
 
         id_of_vulnerability = [self.CERT_SIG_ALGO, self.CERT_KEY_SIZE, self.CERT_CHAIN_OF_TRUST, self.CERT_TRUST,
-                               self.CERT_EXPIRATION, self.OCSP_STAPLING, self.CERT_TRANSPARENCY]
+                               self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING, self.CERT_TRANSPARENCY]
 
         cert_vuln_counter = 0
 
         for vuln in id_of_vulnerability:
             item = self.testssl_result[vuln + id_section]
-            if item["severity"] == "OK":
-                if item["id"] == "cert_notAfter":
-                    ptprint(f"{"cert_expiration":<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
-                else:
-                    ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
-            elif item["severity"] == "INFO":
-                if item["id"] == "cert_notAfter":
-                    ptprint(f"{"cert_expiration":<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                    cert_vuln_counter += 1
-                    self.ptjsonlib.add_vulnerability(
-                        f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-                if item["id"] == "cert_keySize":
-                    ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
-                else:
-                    ptprint(f"{item["id"]:<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                    cert_vuln_counter += 1
-                    self.ptjsonlib.add_vulnerability(
-                        f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+            if item["severity"] in ["OK", "INFO"]:
+                ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
+                """
+                elif item["severity"] == "INFO":
+                    if item["id"] == "cert_notAfter":
+                        ptprint(f"{"cert_expiration":<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
+                        cert_vuln_counter += 1
+                        self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+                    if item["id"] == "cert_keySize":
+                        ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
+                    else:
+                        ptprint(f"{item["id"]:<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
+                        cert_vuln_counter += 1
+                        self.ptjsonlib.add_vulnerability(
+                            f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+                """
             else:
-                if item["id"] == "cert_notAfter":
-                    ptprint(f"{"cert_expiration":<25}:  {item["finding"]}", "VULN", not self.args.json, indent=4)
-                else:
-                    ptprint(f"{item["id"]:<25}:  {item["finding"]}", "VULN", not self.args.json, indent=4)
+                ptprint(f"{item["id"]:<25}:  {item["finding"]}", "VULN", not self.args.json, indent=4)
                 cert_vuln_counter += 1
                 self.ptjsonlib.add_vulnerability(
                     f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')

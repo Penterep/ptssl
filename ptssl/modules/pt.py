@@ -58,16 +58,14 @@ class PT:
             return
 
         for item in self.testssl_result[id_section:id_section + self.PRO_SEC_LEN]:
-            if item["severity"] == "OK":
+            if item["severity"] in ["OK", "INFO"]:
                 ptprint(f"{item["id"]:<7}  {item["finding"]}", "OK", not self.args.json, indent=4)
-            elif item["severity"] == "INFO":
-                ptprint(f"{item["id"]:<7}  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(
-                    f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+            #elif item["severity"] == "INFO":
+            #    ptprint(f"{item["id"]:<7}  {item["finding"]}", "WARNING", not self.args.json, indent=4)
+            #    self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
             else:
                 ptprint(f"{item["id"]:<7}  {item["finding"]}", "VULN", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(
-                    f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+                self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
         return
 
 
