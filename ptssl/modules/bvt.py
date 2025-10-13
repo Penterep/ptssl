@@ -25,6 +25,7 @@ class BVT:
     """
     VULN_SEC_LEN = 21
     ERROR_NUM = -1
+    DESCRIPTION_MAP = {}
 
     def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
         self.args = args
@@ -59,24 +60,36 @@ class BVT:
         for item in self.testssl_result[id_section:id_section + self.VULN_SEC_LEN]:
             if item["id"] == "DROWN_hint" or item["id"] == "LOGJAM-common_primes":
                 continue
-            if item["severity"] == "OK":
-                if item["id"] == "fallback_SCSV" or item["id"] == "secure_renego":
-                    ptprint(f"{item["id"]:<23}  supported", "OK", not self.args.json, indent=4)
-                else:
-                    ptprint(f"{item["id"]:<23}  not vulnerable", "OK", not self.args.json, indent=4)
-            elif item["severity"] == "INFO":
-                ptprint(f"{item["id"]:<23}  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(
-                    f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-            else:
-                if item["id"] == "fallback_SCSV" or item["id"] == "secure_renego":
-                    ptprint(f"{item["id"]:<23}  not supported", "VULN", not self.args.json, indent=4)
-                else:
-                    ptprint(f"{item["id"]:<23}  vulnerable", "VULN", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(
-                    f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-        return
 
+            # Lookup name/description (fallback to raw ID)
+            desc_entry = self.DESCRIPTION_MAP.get(item["id"], {})
+            display_name = desc_entry.get("name", item["id"])
+
+            # Print main status
+            if item["severity"] == "OK":
+                if item["id"] in ("fallback_SCSV", "secure_renego"):
+                    ptprint(f"{display_name:<23}  supported", "OK", not self.args.json, indent=4)
+                else:
+                    ptprint(f"{display_name:<23}  not vulnerable", "OK", not self.args.json, indent=4)
+
+            elif item["severity"] == "INFO":
+                ptprint(f"{display_name:<23}  {item['finding']}", "WARNING", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+
+            else:
+                if item["id"] in ("fallback_SCSV", "secure_renego"):
+                    ptprint(f"{display_name:<23}  not supported", "VULN", not self.args.json, indent=4)
+                else:
+                    ptprint(f"{display_name:<23}  vulnerable", "VULN", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+
+            # Optional verbose description
+            if self.args.verbose and "description" in desc_entry:
+                ptprint(f"↳ {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
 
     def run(self) -> None:
         """

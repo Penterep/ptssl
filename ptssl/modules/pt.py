@@ -25,6 +25,8 @@ class PT:
     """
     PRO_SEC_LEN = 6
     ERROR_NUM = -1
+    DESCRIPTION_MAP = {}
+
 
     def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
         self.args = args
@@ -58,15 +60,22 @@ class PT:
             return
 
         for item in self.testssl_result[id_section:id_section + self.PRO_SEC_LEN]:
+            # Lookup friendly name / description (fallback to raw ID)
+            desc_entry = self.DESCRIPTION_MAP.get(item["id"], {})
+            display_name = desc_entry.get("name", item["id"])
+
+            # Print main status
             if item["severity"] in ["OK", "INFO"]:
-                ptprint(f"{item["id"]:<7}  {item["finding"]}", "OK", not self.args.json, indent=4)
-            #elif item["severity"] == "INFO":
-            #    ptprint(f"{item["id"]:<7}  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-            #    self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+                ptprint(f"{display_name:<7}  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
-                ptprint(f"{item["id"]:<7}  {item["finding"]}", "VULN", not self.args.json, indent=4)
-                self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-        return
+                ptprint(f"{display_name:<7}  {item['finding']}", "VULN", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+
+            # Optional verbose description
+            if self.args.verbose and "description" in desc_entry:
+                ptprint(f"↳ {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
 
 
     def run(self) -> None:

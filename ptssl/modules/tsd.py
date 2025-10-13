@@ -40,6 +40,7 @@ class TSD:
     CERT_NOT_AFTER  = 18
     OCSP_STAPLING = 22
     CERT_TRANSPARENCY = 25
+    DESCRIPTION_MAP = {}
 
     def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
         self.args = args
@@ -78,27 +79,23 @@ class TSD:
 
         for vuln in id_of_vulnerability:
             item = self.testssl_result[vuln + id_section]
+            # Lookup friendly name / description (fallback to raw ID)
+            desc_entry = self.DESCRIPTION_MAP.get(item["id"], {})
+            display_name = desc_entry.get("name", item["id"])
+
+            # Print main status
             if item["severity"] in ["OK", "INFO"]:
-                ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
-                """
-                elif item["severity"] == "INFO":
-                    if item["id"] == "cert_notAfter":
-                        ptprint(f"{"cert_expiration":<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                        cert_vuln_counter += 1
-                        self.ptjsonlib.add_vulnerability(f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-                    if item["id"] == "cert_keySize":
-                        ptprint(f"{item["id"]:<25}:  {item["finding"]}", "OK", not self.args.json, indent=4)
-                    else:
-                        ptprint(f"{item["id"]:<25}:  {item["finding"]}", "WARNING", not self.args.json, indent=4)
-                        cert_vuln_counter += 1
-                        self.ptjsonlib.add_vulnerability(
-                            f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
-                """
+                ptprint(f"{display_name:<25}:  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
-                ptprint(f"{item["id"]:<25}:  {item["finding"]}", "VULN", not self.args.json, indent=4)
+                ptprint(f"{display_name:<25}:  {item['finding']}", "VULN", not self.args.json, indent=4)
                 cert_vuln_counter += 1
                 self.ptjsonlib.add_vulnerability(
-                    f'PTV-WEB-MISC-{''.join(ch for ch in item["id"] if ch.isalnum()).upper()}')
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+
+            # Optional verbose description
+            if self.args.verbose and "description" in desc_entry:
+                ptprint(f"↳ {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
 
         if cert_vuln_counter > 0:
             ptprint("The server is vulnerable to fake certificates abuse", "VULN", not self.args.json, indent=4)
