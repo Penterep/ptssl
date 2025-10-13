@@ -39,6 +39,7 @@ from ptlibs import ptjsonlib, ptmisclib, ptnethelper
 from ptlibs.ptprinthelper import ptprint, print_banner, help_print, get_colored_text
 from ptlibs.threads import ptthreads, printlock
 from ptlibs.http.http_client import HttpClient
+from ptlibs.app_dirs import AppDirs
 
 from helpers._thread_local_stdout import ThreadLocalStdout
 from helpers.helpers import Helpers
@@ -124,7 +125,7 @@ class PtSSL:
         if not shutil.which("testssl"):
             self.ptjsonlib.end_error("testssl.sh is not installed or not found in PATH. Please install it first via `sudo apt install testssl.sh`.", self.args.json)
 
-        cache_dir = ptmisclib.get_penterep_temp_dir()
+        cache_dir = AppDirs("ptssl").get_data_dir()
         os.makedirs(cache_dir, exist_ok=True)
 
         hash_name = hashlib.md5(url.encode("utf-8")).hexdigest()
@@ -325,7 +326,7 @@ def get_help():
         return sorted(rows, key=lambda x: x[2])
 
     return [
-        {"description": ["Penterep template script"]},
+        {"description": ["Wrapper for testssl.sh"]},
         {"usage": ["ptssl <options>"]},
         {"usage_example": [
             "ptssl -u https://www.example.com",
