@@ -34,10 +34,15 @@ ptssl -u htttps://www.example.com/
 ```
 -u   --url      <url>      Connect to URL
 -ts  --tests    <test>     Specify one or more tests to perform:
-                 CT        Testing for supported ciphers
-                 PCT       Testing who gives order of ciphers
-                 PT        Testing for allowed protocols
-                 TSD       Testing server defaults
+                BVT        Testing common vulnerabilities
+                CT         Testing for supported ciphers
+                FST        Testing if Forward Security is offered
+                GT         Testing for bugs
+                HSTS       Testing if HSTS is offered
+                HTTPR      Testing HTTP redirection
+                PCT        Testing who gives order of ciphers
+                PT         Testing for allowed protocols
+                TSD        Testing server defaults
 
 -t   --threads  <threads>  Set thread count (default 10)
 -vv  --verbose             Show verbose output
