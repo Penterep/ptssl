@@ -40,10 +40,10 @@ class HSTS:
             response = self.helpers.http_client.send_request(self.args.url, allow_redirects=False)
             hsts_header = response.headers.get("strict-transport-security", None)
             if not hsts_header:
-                ptprint(f"HSTS not offered", "VULN", not self.args.json, indent=4)
+                ptprint(f"{'Strict-Transport-Security header':<44} not offered", "VULN", not self.args.json, indent=4)
                 self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSMIS")
             else:
-                ptprint(f"HSTS offered", "OK", not self.args.json, indent=4)
+                ptprint(f"{'Strict-Transport-Security header':<44} offered", "OK", not self.args.json, indent=4)
                 self.parse_hsts_header(hsts_header)
         except:
             ptprint(f"Error retrieving response for HSTS test", "ERROR", not self.args.json, indent=4)
