@@ -14,6 +14,7 @@ Usage:
 import re
 from ptlibs import ptjsonlib
 from ptlibs.ptprinthelper import ptprint
+from helpers.descriptions import DESCRIPTION_MAP
 
 __TESTLABEL__ = "Testing if HSTS is offered:"
 
@@ -80,28 +81,28 @@ class HSTS:
         if self.attribs["max-age"]:
             value = self.attribs["max-age"]
             if value < 2592000:
-                ptprint(f"max-age value is too small ({self.attribs['max-age']}), recommended value least 31536000", "VULN", not self.args.json, indent=4)
+                ptprint(f"{'max-age':<44} value is too small ({self.attribs['max-age']}), recommended value least 31536000", "VULN", not self.args.json, indent=4)
                 self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSINV")
             elif value < 31536000:
-                ptprint(f"max-age value is smaller than recommended ({self.attribs['max-age']}), recommended value least 31536000", "VULN", not self.args.json, indent=4)
+                ptprint(f"{'max-age':<44} value is smaller than recommended ({self.attribs['max-age']}), recommended value least 31536000", "VULN", not self.args.json, indent=4)
                 self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSINV")
             else:
-                ptprint(f"max-age value offered ({self.attribs['max-age']})", "OK", not self.args.json, indent=4)
+                ptprint(f"{'max-age':<44} value offered ({self.attribs['max-age']})", "OK", not self.args.json, indent=4)
 
         # Checking for includeSubDomains and preload
         self.attribs["includeSubDomains"] = bool(include_subdomains_pattern.search(header_value))
         self.attribs["preload"] = bool(preload_pattern.search(header_value))
 
         if self.attribs["preload"]:
-            ptprint(f"preload offered", "OK", not self.args.json, indent=4)
+            ptprint(f"{'preload':<44} offered", "OK", not self.args.json, indent=4)
         else:
-            ptprint(f"preload not offered", "VULN", not self.args.json, indent=4)
+            ptprint(f"{'preload':<44} not offered", "VULN", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSPL")
 
         if self.attribs["includeSubDomains"]:
-            ptprint(f"includeSubdomains offered", "OK", not self.args.json, indent=4)
+            ptprint(f"{'includeSubdomains':<44} offered", "OK", not self.args.json, indent=4)
         else:
-            ptprint(f"includeSubdomains not offered", "VULN", not self.args.json, indent=4)
+            ptprint(f"{'includeSubdomains':<44} not offered", "VULN", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability("PTV-WEB-HTTP-HSTSSD")
 
 def run(args, ptjsonlib, helpers, testssl_result):

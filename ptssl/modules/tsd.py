@@ -10,8 +10,11 @@ Usage:
     run(args, ptjsonlib)
 """
 
+from datetime import datetime
+
 from ptlibs import ptjsonlib
 from ptlibs.ptprinthelper import ptprint
+from helpers.descriptions import DESCRIPTION_MAP
 
 __TESTLABEL__ = "Testing server defaults:"
 
@@ -80,22 +83,31 @@ class TSD:
         for vuln in id_of_vulnerability:
             item = self.testssl_result[vuln + id_section]
             # Lookup friendly name / description (fallback to raw ID)
-            desc_entry = self.DESCRIPTION_MAP.get(item["id"], {})
+            desc_entry = DESCRIPTION_MAP.get(item["id"], {})
             display_name = desc_entry.get("name", item["id"])
+
 
             # Print main status
             if item["severity"] in ["OK", "INFO"]:
-                ptprint(f"{display_name:<25}:  {item['finding']}", "OK", not self.args.json, indent=4)
+                ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
-                ptprint(f"{display_name:<25}:  {item['finding']}", "VULN", not self.args.json, indent=4)
-                cert_vuln_counter += 1
-                self.ptjsonlib.add_vulnerability(
-                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
-                )
+
+                if item["id"].lower() == "cert_notafter":
+                    # Custom logic for cert_notafter
+                    is_expired = datetime.strptime(item['finding'], "%Y-%m-%d %H:%M") < datetime.now() # Check if cert is expired
+                    ptprint(f"{display_name:<43}:  {item['finding']}", "WARNING" if not is_expired else "VULN", not self.args.json, indent=4)
+                    if is_expired:
+                        self.ptjsonlib.add_vulnerability(f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}")
+                else:
+                    ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
+                    cert_vuln_counter += 1
+                    self.ptjsonlib.add_vulnerability(
+                        f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                    )
 
             # Optional verbose description
             if self.args.verbose and "description" in desc_entry:
-                ptprint(f"↳ {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
+                ptprint(f"  {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
 
         if cert_vuln_counter > 0:
             ptprint("The server is vulnerable to fake certificates abuse", "VULN", not self.args.json, indent=4)

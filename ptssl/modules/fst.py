@@ -13,6 +13,7 @@ Usage:
 
 from ptlibs import ptjsonlib
 from ptlibs.ptprinthelper import ptprint
+from helpers.descriptions import DESCRIPTION_MAP
 
 __TESTLABEL__ = "Testing if Forward Security is offered:"
 
@@ -24,7 +25,6 @@ class FST:
     It consumes the JSON output from testssl and check if FS is offered.
     """
     ERROR_NUM = -1
-    DESCRIPTION_MAP = {}
 
 
     def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
@@ -59,26 +59,26 @@ class FST:
         item = self.testssl_result[id_fs]
 
         # Lookup friendly name / description (fallback to raw ID)
-        desc_entry = self.DESCRIPTION_MAP.get(item["id"], {})
+        desc_entry = DESCRIPTION_MAP.get(item["id"], {})
         display_name = desc_entry.get("name", item["id"])
 
         # Print main status
         if item["severity"] == "OK":
-            ptprint(f"{display_name:<5}  {item['finding']}", "OK", not self.args.json, indent=4)
+            ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
         elif item["severity"] == "INFO":
-            ptprint(f"{display_name:<5}  {item['finding']}", "WARNING", not self.args.json, indent=4)
+            ptprint(f"{display_name:<43}  {item['finding']}", "WARNING", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability(
                 f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
             )
         else:
-            ptprint(f"{display_name:<5}  {item['finding']}", "VULN", not self.args.json, indent=4)
+            ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
             self.ptjsonlib.add_vulnerability(
                 f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
             )
 
         # Optional verbose description
         if self.args.verbose and "description" in desc_entry:
-            ptprint(f"↳ {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
+            ptprint(f"  {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
 
 
 
