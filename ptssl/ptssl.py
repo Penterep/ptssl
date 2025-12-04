@@ -134,12 +134,10 @@ class PtSSL:
         temp_cache_file = os.path.join(cache_dir, f"{hash_name}_{uuid.uuid4().hex}.tmp")
         CACHE_EXPIRY_SECONDS = 30 * 60 # 30 mins
 
-        if self.args.verbose:
+        if not self.args.verbose:
             ptprint(f"Testssl is running, please wait:", "TITLE", not self.args.json, flush=True, clear_to_eol=True, colortext=True, end="")
             if not self.args.json:
                 sys.stdout.write("\033[?25l")  # Hide cursor
-
-        else:
             stop_spinner = threading.Event()
             spinner_thread = threading.Thread(target=spinner_func, args=(stop_spinner,))
             ptprint(f" ", "TEXT", not self.args.json, end="\n", flush=True, clear_to_eol=True)
