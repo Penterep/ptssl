@@ -56,7 +56,7 @@ class PtSSL:
         self.http_client = HttpClient(args=self.args, ptjsonlib=self.ptjsonlib)
         self.helpers     = Helpers(args=self.args, ptjsonlib=self.ptjsonlib, http_client=self.http_client)
 
-        self.testssl_result = self._run_testssl(args.url)
+        self.testssl_result = self._run_testssl(args.domain)
 
         # Activate ThreadLocalStdout stdout proxy
         self.thread_local_stdout = ThreadLocalStdout(sys.stdout)
@@ -71,7 +71,7 @@ class PtSSL:
         ptprint(self.ptjsonlib.get_result_json(), "", self.args.json)
 
 
-    def _run_testssl(self, url) -> None:
+    def _run_testssl(self, domain) -> None:
         """
         Executes testssl.sh scan against the specified URL and returns parsed JSON results.
 
@@ -88,7 +88,7 @@ class PtSSL:
         - Ensures the cursor is shown again and spinner thread is stopped when done.
 
         Args:
-            url (str): Target hostname or IP address to scan.
+            domain (str): Target hostname or IP address to scan.
 
         Returns:
             dict: Parsed JSON output from testssl.sh.
@@ -128,7 +128,7 @@ class PtSSL:
         cache_dir = AppDirs("ptssl").get_data_dir()
         os.makedirs(cache_dir, exist_ok=True)
 
-        hash_name = hashlib.md5(url.encode("utf-8")).hexdigest()
+        hash_name = hashlib.md5(domain.encode("utf-8")).hexdigest()
         final_cache_file = os.path.join(cache_dir, f"{hash_name}.json")
         #temp_cache_file = final_cache_file + ".tmp"
         temp_cache_file = os.path.join(cache_dir, f"{hash_name}_{uuid.uuid4().hex}.tmp")
@@ -144,7 +144,7 @@ class PtSSL:
             spinner_thread.start()
 
         try:
-            with self.acquire_testssl_lock(url, cache_dir):
+            with self.acquire_testssl_lock(domain, cache_dir):
                 cached_result = load_valid_cache(final_cache_file, CACHE_EXPIRY_SECONDS)
                 if cached_result is not None:
                     return cached_result
@@ -155,8 +155,15 @@ class PtSSL:
                     except Exception:
                         pass
 
+                cmd = ["testssl", "--jsonfile", temp_cache_file, "--logfile", "/dev/stdout"]
+
+                if self.args.starttls:
+                    cmd += ["--starttls", self.args.starttls]
+
+                cmd.append(domain)
+
                 subprocess.run(
-                    ["testssl", "--jsonfile", temp_cache_file, "--logfile", "/dev/stdout", url],
+                    cmd,
                     check=True,
                     bufsize=1,
                     universal_newlines=True,
@@ -182,7 +189,7 @@ class PtSSL:
                 spinner_thread.join()
 
     @contextmanager
-    def acquire_testssl_lock(self, url: str, cache_dir: str):
+    def acquire_testssl_lock(self, domain: str, cache_dir: str):
         """
         Context manager for exclusive testssl execution per domain.
 
@@ -191,11 +198,11 @@ class PtSSL:
         context exits or if the process is terminated normally.
 
         Args:
-            url (str): URL/domain to test
+            domain (str): domain to test
             cache_dir (str): directory for cache and lock files
         """
         os.makedirs(cache_dir, exist_ok=True)
-        hash_name = hashlib.md5(url.encode("utf-8")).hexdigest()
+        hash_name = hashlib.md5(domain.encode("utf-8")).hexdigest()
         lock_file_path = os.path.join(cache_dir, f"{hash_name}.lock")
 
         with open(lock_file_path, "w") as lock_file:
@@ -327,11 +334,13 @@ def get_help():
         {"description": ["Wrapper for testssl.sh"]},
         {"usage": ["ptssl <options>"]},
         {"usage_example": [
-            "ptssl -u https://www.example.com",
+            "ptssl -d https://www.example.com",
         ]},
         {"options": [
-            ["-u",  "--url",                    "<url>",            "Connect to URL"],
+            ["-d",  "--domain",                    "<domain>",            "Connect to domain"],
             ["-ts", "--tests",                  "<test>",     "Specify one or more tests to perform:"],
+            ["-st", "--starttls", "<protocol>",
+             "STARTTLS protocol (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)"],
             *_get_available_modules_help(),
             ["", "", "", ""],
             ["-t",  "--threads",                "<threads>",        "Set thread count (default 10)"],
@@ -344,12 +353,16 @@ def get_help():
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help="False", description=f"{SCRIPTNAME} <options>")
-    parser.add_argument("-u",  "--url",            type=str, required=True)
+    parser.add_argument("-d",  "--domain",            type=str, required=True)
     parser.add_argument("-ts", "--tests",          type=lambda s: s.lower(), nargs="+")
     parser.add_argument("-t",  "--threads",        type=int, default=10)
     parser.add_argument("-vv", "--verbose",        action="store_true")
     parser.add_argument("-j",  "--json",           action="store_true")
     parser.add_argument("-v",  "--version",        action='version', version=f'{SCRIPTNAME} {__version__}')
+    parser.add_argument("-st", "--starttls", type=str, default=None,
+                        choices=["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap"
+                                    , "nntp", "sieve", "postgres", "mysql"],
+                        help="STARTTLS protocol type")
 
     parser.add_argument("--socket-address",          type=str, default=None)
     parser.add_argument("--socket-port",             type=str, default=None)
@@ -361,12 +374,10 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
-    if not args.url.startswith("https://"):
+    if args.domain.startswith("http://"):
         ptjsonlib.PtJsonLib().end_error("The provided URL uses plain HTTP, which is not secured by SSL/TLS.",
         details="This tool is designed to test SSL/TLS configurations on HTTPS (SSL-secured) endpoints only.",
         condition=args.json)
-
-    args.url = urlunparse(urlparse(args.url)._replace(path='', params='', query='', fragment=''))
 
     print_banner(SCRIPTNAME, __version__, args.json, 0)
     return args
