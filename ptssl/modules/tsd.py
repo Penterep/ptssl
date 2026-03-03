@@ -37,6 +37,7 @@ class TSD:
     ERROR_NUM = -1
     CERT_SIG_ALGO = 0
     CERT_KEY_SIZE = 1
+    CERT_SUBJECTALTNAME = 11
     CERT_TRUST = 12
     CERT_CHAIN_OF_TRUST = 13
     CERT_NOT_BEFORE = 17
@@ -76,7 +77,8 @@ class TSD:
             return
 
         id_of_vulnerability = [self.CERT_SIG_ALGO, self.CERT_KEY_SIZE, self.CERT_CHAIN_OF_TRUST, self.CERT_TRUST,
-                               self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING, self.CERT_TRANSPARENCY]
+                               self.CERT_SUBJECTALTNAME, self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING,
+                               self.CERT_TRANSPARENCY]
 
         cert_vuln_counter = 0
 
