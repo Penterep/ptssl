@@ -159,6 +159,10 @@ DESCRIPTION_MAP = {
         "name": "Certificate Trust",
         "description": "Indicates if the certificate is trusted by browsers (SAN and SNI checked)."
     },
+    "cert_subjectAltName": {
+        "name": "Certificate Alternative Domain Names",
+        "description": "All alternative domains listed in the certificate."
+    },
     "cert_notAfter": {
         "name": "Certificate Expiration Date",
         "description": "The expiration date of the server certificate."
@@ -194,5 +198,30 @@ DESCRIPTION_MAP = {
     "includeSubdomains offered": {
         "name": "HSTS Include Subdomains",
         "description": "Indicates if HSTS applies to all subdomains as well."
-    }
+    },
+    "FS_TLS10_sig_algs": {
+        "name": "Signature Algorithms for TLS 1.0",
+        "description": "Some signature algorithms are weak."
+    },
+    "FS_TLS11_sig_algs": {
+        "name": "Signature Algorithms for TLS 1.1",
+        "description": "Some signature algorithms are weak."
+    },
+    "FS_TLS12_sig_algs": {
+        "name": "Signature Algorithms for TLS 1.2",
+        "description": "Some signature algorithms are weak."
+    },
+    "FS_TLS13_sig_algs": {
+        "name": "Signature Algorithms for TLS 1.3",
+        "description": "Some signature algorithms are weak."
+    },
+    "FS_SSLv2_sig_algs": {
+        "name": "Signature Algorithms for SSLv2",
+        "description": "Some signature algorithms are weak."
+    },
+    "FS_SSLv3_sig_algs": {
+        "name": "Signature Algorithms for SSLv3",
+        "description": "Some signature algorithms are weak."
+    },
+
 }
