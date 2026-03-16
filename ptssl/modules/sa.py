@@ -1,0 +1,101 @@
+"""
+Signing algorithms test – detects when server use weak Signing algorithms.
+Analyses the signing algorithm item of a testssl JSON report to tell
+whether the target server offers has weak algorithms.
+
+Contains:
+- SA class for performing the detection test.
+- run() function as an entry point for running the test.
+
+Usage:
+    run(args, ptjsonlib)
+"""
+
+from ptlibs import ptjsonlib
+from ptlibs.ptprinthelper import ptprint
+from helpers.descriptions import DESCRIPTION_MAP
+
+__TESTLABEL__ = "Testing for weak Signing algorithms:"
+
+
+class SA:
+    """
+    SA checks for weak Signing algorithms.
+
+    It consumes the JSON output from testssl and check if weak Signing algorithm is found.
+    """
+    ERROR_NUM = -1
+
+
+    def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
+        self.args = args
+        self.ptjsonlib = ptjsonlib
+        self.helpers = helpers
+        self.testssl_result = testssl_result
+
+    def _find_section_sa(self) -> int:
+        """
+        Runs through JSON file and finds SA item.
+        """
+        id_number = 0
+        for item in self.testssl_result:
+            if item["id"].startswith("FS_") and item["id"].endswith("_sig_algs"):
+                return id_number
+            id_number += 1
+        return self.ERROR_NUM
+
+    def _print_test_result(self) -> None:
+        """
+        Finds starting id of "Signing algorithms" section.
+        Goes through the section using list of IDs and prints out potential vulnerabilities.
+        1) OK
+        2) INFO - prints warning information
+        3) VULN - prints out vulnerabilities
+        """
+        id_section = self._find_section_sa()
+        if id_section == self.ERROR_NUM:
+            self.ptjsonlib.end_error("testssl could not provide Signing algorithms section", self.args.json)
+            return
+
+        cert_vuln_counter = 0
+        item = self.testssl_result[id_section]
+        while item["id"].startswith("FS_") and item["id"].endswith("_sig_algs"):
+            # Lookup friendly name / description (fallback to raw ID)
+            desc_entry = DESCRIPTION_MAP.get(item["id"], {})
+            display_name = desc_entry.get("name", item["id"])
+
+            # Print main status
+            if item["severity"] == "OK":
+                ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
+            elif item["severity"] == "INFO":
+                ptprint(f"{display_name:<43}  {item['finding']}", "WARNING", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+            else:
+                ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+
+            # Optional verbose description
+            if self.args.verbose and "description" in desc_entry:
+                ptprint(f"  {desc_entry['description']}", "ADDITIONS", not self.args.json, indent=6, colortext=True)
+            id_section += 1
+            item = self.testssl_result[id_section]
+        return
+
+
+    def run(self) -> None:
+        """
+        Prints out the test label
+        Execute the testssl report function.
+        """
+        ptprint(__TESTLABEL__, "TITLE", not self.args.json, colortext=True)
+        self._print_test_result()
+        return
+
+
+def run(args, ptjsonlib, helpers, testssl_result):
+    """Entry point for running the SA module (Signing algorithms)."""
+    SA(args, ptjsonlib, helpers, testssl_result).run()
