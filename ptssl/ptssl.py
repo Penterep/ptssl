@@ -339,9 +339,9 @@ def get_help():
         {"options": [
             ["-d",  "--domain",                    "<domain>",            "Connect to domain"],
             ["-ts", "--tests",                  "<test>",     "Specify one or more tests to perform:"],
+            *_get_available_modules_help(),
             ["-st", "--starttls", "<protocol>",
              "STARTTLS protocol (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)"],
-            *_get_available_modules_help(),
             ["", "", "", ""],
             ["-t",  "--threads",                "<threads>",        "Set thread count (default 10)"],
             ["-vv", "--verbose",                "",                 "Show verbose output"],
