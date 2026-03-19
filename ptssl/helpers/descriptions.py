@@ -159,10 +159,6 @@ DESCRIPTION_MAP = {
         "name": "Certificate Trust",
         "description": "Indicates if the certificate is trusted by browsers (SAN and SNI checked)."
     },
-    "cert_subjectAltName": {
-        "name": "Certificate Alternative Domain Names",
-        "description": "All alternative domains listed in the certificate."
-    },
     "cert_notAfter": {
         "name": "Certificate Expiration Date",
         "description": "The expiration date of the server certificate."
