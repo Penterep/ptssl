@@ -77,7 +77,7 @@ class TSD:
             return
 
         id_of_vulnerability = [self.CERT_SIG_ALGO, self.CERT_KEY_SIZE, self.CERT_CHAIN_OF_TRUST, self.CERT_TRUST,
-                               self.CERT_SUBJECTALTNAME, self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING,
+                               self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING,
                                self.CERT_TRANSPARENCY]
 
         cert_vuln_counter = 0
