@@ -27,12 +27,14 @@ source ~/.zshrc
 
 ## Usage examples
 ```
-ptssl -u htttps://www.example.com/
+ptssl -d https://www.example.com/
+ptssl -d example.com
+ptssl -d ftp.example.com:21 --starttls ftp
 ```
 
 ## Options
 ```
--u   --url      <url>      Connect to URL
+-d   --domain   <domain>   Connect to DOMAIN 
 -ts  --tests    <test>     Specify one or more tests to perform:
                 BVT        Testing common vulnerabilities
                 CT         Testing for supported ciphers
@@ -43,7 +45,8 @@ ptssl -u htttps://www.example.com/
                 PCT        Testing who gives order of ciphers
                 PT         Testing for allowed protocols
                 TSD        Testing server defaults
-
+-st --starttls <protocol>  Use STARTTLS for the specified protocol
+                           (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)
 -t   --threads  <threads>  Set thread count (default 10)
 -vv  --verbose             Show verbose output
 -v   --version             Show script version and exit

@@ -64,7 +64,7 @@ class PT:
             display_name = desc_entry.get("name", item["id"])
 
             # Print main status
-            if item["severity"] in ["OK", "INFO"]:
+            if item["severity"] in ["OK"]:
                 ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
                 ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
