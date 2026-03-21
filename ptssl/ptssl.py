@@ -135,7 +135,6 @@ class PtSSL:
         CACHE_EXPIRY_SECONDS = 30 * 60 # 30 mins
 
         if not self.args.verbose:
-            ptprint(f"Testssl is running, please wait:", "TITLE", not self.args.json, flush=True, clear_to_eol=True, colortext=True, end="")
             if not self.args.json:
                 sys.stdout.write("\033[?25l")  # Hide cursor
             stop_spinner = threading.Event()
@@ -159,12 +158,16 @@ class PtSSL:
 
                 if self.args.starttls:
                     cmd += ["--starttls", self.args.starttls]
+                    ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
+                            "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
+                            "to encryption. Results may not reflect a fully secure configuration—consider testing "
+                            "implicit TLS instead.", "VULN", not self.args.json)
 
                 cmd.append(domain)
 
                 subprocess.run(
                     cmd,
-                    check=True,
+                    check=False,
                     bufsize=1,
                     universal_newlines=True,
                     stdout=sys.stdout if self.args.verbose else subprocess.DEVNULL,
@@ -342,7 +345,6 @@ def get_help():
             *_get_available_modules_help(),
             ["-st", "--starttls", "<protocol>",
              "STARTTLS protocol (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)"],
-            ["", "", "", ""],
             ["-t",  "--threads",                "<threads>",        "Set thread count (default 10)"],
             ["-vv", "--verbose",                "",                 "Show verbose output"],
             ["-v",  "--version",                "",                 "Show script version and exit"],

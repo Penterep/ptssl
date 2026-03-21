@@ -97,7 +97,7 @@ class TSD:
                 if item["id"].lower() == "cert_notafter":
                     # Custom logic for cert_notafter
                     is_expired = datetime.strptime(item['finding'], "%Y-%m-%d %H:%M") < datetime.now() # Check if cert is expired
-                    ptprint(f"{display_name:<43}:  {item['finding']}", "WARNING" if not is_expired else "VULN", not self.args.json, indent=4)
+                    ptprint(f"{display_name:<43}  {item['finding']}", "WARNING" if not is_expired else "VULN", not self.args.json, indent=4)
                     if is_expired:
                         self.ptjsonlib.add_vulnerability(f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}")
                 else:

@@ -57,7 +57,6 @@ class SA:
             self.ptjsonlib.end_error("testssl could not provide Signing algorithms section", self.args.json)
             return
 
-        cert_vuln_counter = 0
         item = self.testssl_result[id_section]
         while item["id"].startswith("FS_") and item["id"].endswith("_sig_algs"):
             # Lookup friendly name / description (fallback to raw ID)
