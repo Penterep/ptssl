@@ -154,7 +154,7 @@ class PtSSL:
                     except Exception:
                         pass
 
-                cmd = ["testssl", "--jsonfile", temp_cache_file, "--logfile", "/dev/stdout"]
+                cmd = ["testssl", "--jsonfile", temp_cache_file, "--warnings", "batch"]
 
                 if self.args.starttls:
                     cmd += ["--starttls", self.args.starttls]
