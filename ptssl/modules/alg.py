@@ -75,9 +75,9 @@ class ALG:
 
             while not item["id"].startswith("cipherorder"):
                 if item["severity"] == "OK":
-                    ptprint(f"{item['finding'].split(maxsplit=1)[1]}", "OK", not self.args.json, indent=8)
+                    ptprint(f"{item['finding'].split(maxsplit=2)[2]}", "OK", not self.args.json, indent=8)
                 else:
-                    ptprint(f"{item['finding'].split(maxsplit=1)[1]}", "VULN", not self.args.json, indent=8)
+                    ptprint(f"{item['finding'].split(maxsplit=2)[2]}", "WARNING", not self.args.json, indent=8)
                     self.ptjsonlib.add_vulnerability(f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}")
                 current += 1
                 item = self.testssl_result[current]
