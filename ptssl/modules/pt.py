@@ -64,7 +64,12 @@ class PT:
             display_name = desc_entry.get("name", item["id"])
 
             # Print main status
-            if item["severity"] in ["OK"]:
+            if item["id"] in ["TLS1_3"] and item["severity"] not in ["OK"]:
+                ptprint(f"{display_name:<43}  {item['finding']}", "WARNING", not self.args.json, indent=4)
+                self.ptjsonlib.add_vulnerability(
+                    f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
+                )
+            elif item["severity"] in ["OK"]:
                 ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
                 ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
