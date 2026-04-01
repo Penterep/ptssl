@@ -59,30 +59,43 @@ class ALG:
             self.ptjsonlib.end_error("testssl could not provide Cipher algorithms section", self.args.json)
             return
 
+        secure_algs = []
+        weak_algs = []
+
         item = self.testssl_result[id_section]
         current = id_section
-        for i in range (6):
+        for i in range(6):
             if not item["id"].startswith("cipher_order-") or not item["id"].endswith(self.cert_list[i]):
                 ptprint(f"{self.cert_print_list[i]}", "TEXT", not self.args.json, indent=4)
                 ptprint("-", "TEXT", not self.args.json, indent=8)
                 continue
 
             ptprint(f"{self.cert_print_list[i]}  order:{item['finding']}", item['severity'], not self.args.json, indent=4)
-            if item["severity"] != "OK":
-                self.ptjsonlib.add_vulnerability(f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}")
             current += 1
             item = self.testssl_result[current]
 
             while not item["id"].startswith("cipherorder"):
+                alg_name = item['finding'].split(maxsplit=2)[2].split()[0]
                 if item["severity"] == "OK":
-                    ptprint(f"{item['finding'].split(maxsplit=2)[2]}", "OK", not self.args.json, indent=8)
+                    ptprint(f"{alg_name}", "OK", not self.args.json, indent=8)
+                    secure_algs.append(alg_name)
                 else:
-                    ptprint(f"{item['finding'].split(maxsplit=2)[2]}", "WARNING", not self.args.json, indent=8)
-                    self.ptjsonlib.add_vulnerability(f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}")
+                    ptprint(f"{alg_name}", "WARNING", not self.args.json, indent=8)
+                    weak_algs.append(alg_name)
                 current += 1
                 item = self.testssl_result[current]
             current += 1
             item = self.testssl_result[current]
+
+        if weak_algs:
+            description = ""
+            if secure_algs:
+                description += "Secure algorithms: " + ", ".join(secure_algs)
+            if secure_algs and weak_algs:
+                description += "\r\n"
+            description += "Insecure algorithms: " + ", ".join(weak_algs)
+            self.ptjsonlib.add_properties({"description": description})
+            self.ptjsonlib.add_vulnerability("PTV-WEB-CRYPT-ALGWEAK")
         return
 
 
