@@ -47,6 +47,9 @@ from _version import __version__
 
 import requests
 
+STARTTLS_PROTOCOLS = ["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap", "nntp", "sieve", "postgres", "mysql"]
+
+
 class PtSSL:
     def __init__(self, args):
         self.ptjsonlib   = ptjsonlib.PtJsonLib()
@@ -73,43 +76,14 @@ class PtSSL:
 
     def _run_testssl(self, domain) -> None:
         """
-        Executes testssl.sh scan against the specified URL and returns parsed JSON results.
+        Executes testssl.sh scan against the specified domain and returns parsed JSON results.
 
-        Workflow:
-        - Checks if a cached JSON result file exists (based on an MD5 hash of the URL) and is fresh (not older than 30 minutes).
-        If a valid cache is found, loads and returns it without re-running testssl.sh.
-        - If no valid cache exists, verifies that `testssl` is available in PATH, otherwise aborts with an error.
-        - Removes any stale temporary cache file before running testssl.sh to avoid conflicts.
-        - Runs testssl.sh with JSON output directed to a temporary cache file.
-        - Shows live CLI output as a spinner or verbose output depending on the verbosity setting.
-        - On success, reads JSON results from the temporary file, atomically replaces the final cache file,
-        and returns the parsed data.
-        - On subprocess error, reports via `end_error`.
-        - Ensures the cursor is shown again and spinner thread is stopped when done.
-
-        Args:
-            domain (str): Target hostname or IP address to scan.
-
-        Returns:
-            dict: Parsed JSON output from testssl.sh.
-
-        Raises:
-            subprocess.CalledProcessError: If the testssl.sh subprocess fails.
+        Determines run mode based on CLI flags:
+        - --implicittls or no --protocol: implicit TLS only
+        - --starttls: STARTTLS only (requires --protocol)
+        - neither: try implicit first, fallback to STARTTLS if --protocol is provided
         """
-        def load_valid_cache(path, max_age_seconds):
-            if not os.path.exists(path):
-                return None
-            try:
-                if (time.time() - os.path.getmtime(path)) > max_age_seconds:
-                    raise ValueError("Cache expired")
-                with open(path, "r") as f:
-                    return json.load(f)
-            except Exception:
-                try:
-                    os.remove(path)
-                except Exception:
-                    pass
-                return None
+        spinner_label = [None]
 
         def spinner_func(stop_event):
             spinner = itertools.cycle(["|", "/", "-", "\\"])
@@ -118,7 +92,8 @@ class PtSSL:
                 sys.stdout.write("\033[?25l")  # Hide cursor
                 sys.stdout.flush()
             while not stop_event.is_set():
-                ptprint(get_colored_text(f"[{next(spinner)}] ", "TITLE") + f"Testssl is running, please wait {next(spinner_dots)}", "TEXT", not self.args.json, end="\r", flush=True, clear_to_eol=True, colortext="TITLE")
+                label = f" ({spinner_label[0]})" if spinner_label[0] else ""
+                ptprint(get_colored_text(f"[{next(spinner)}] ", "TITLE") + f"Testssl is running{label}, please wait {next(spinner_dots)}", "TEXT", not self.args.json, end="\r", flush=True, clear_to_eol=True, colortext="TITLE")
                 time.sleep(0.1)
             ptprint(" ", "TEXT", not self.args.json, flush=True, clear_to_eol=True)
 
@@ -128,11 +103,8 @@ class PtSSL:
         cache_dir = AppDirs("ptssl").get_data_dir()
         os.makedirs(cache_dir, exist_ok=True)
 
-        hash_name = hashlib.md5(domain.encode("utf-8")).hexdigest()
-        final_cache_file = os.path.join(cache_dir, f"{hash_name}.json")
-        #temp_cache_file = final_cache_file + ".tmp"
-        temp_cache_file = os.path.join(cache_dir, f"{hash_name}_{uuid.uuid4().hex}.tmp")
-        CACHE_EXPIRY_SECONDS = 30 * 60 # 30 mins
+        hostname = domain.split("://")[-1].rstrip("/")
+        target = f"{hostname}:{self.args.port}" if self.args.port else hostname
 
         if not self.args.verbose:
             if not self.args.json:
@@ -143,41 +115,32 @@ class PtSSL:
             spinner_thread.start()
 
         try:
-            with self.acquire_testssl_lock(domain, cache_dir):
-                cached_result = load_valid_cache(final_cache_file, CACHE_EXPIRY_SECONDS)
-                if cached_result is not None:
-                    return cached_result
-
-                if os.path.exists(temp_cache_file):
-                    try:
-                        os.remove(temp_cache_file)
-                    except Exception:
-                        pass
-
-                cmd = ["testssl", "--jsonfile", temp_cache_file, "--warnings", "batch"]
-
-                if self.args.starttls:
-                    cmd += ["--starttls", self.args.starttls]
+            if self.args.implicittls or not self.args.protocol:
+                if self.args.implicittls:
+                    spinner_label[0] = "implicit TLS"
+                result = self._execute_testssl_run(target, cache_dir)
+            elif self.args.starttls:
+                spinner_label[0] = "STARTTLS"
+                ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
+                        "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
+                        "to encryption. Results may not reflect a fully secure configuration—consider testing "
+                        "implicit TLS instead.", "VULN", not self.args.json)
+                result = self._execute_testssl_run(target, cache_dir, starttls_protocol=self.args.protocol)
+            else:
+                # Auto-detect: try implicit first, fallback to STARTTLS
+                spinner_label[0] = "implicit TLS"
+                result = self._execute_testssl_run(target, cache_dir)
+                if result is None:
+                    ptprint("Implicit TLS failed, retrying with STARTTLS...", "WARNING", not self.args.json)
                     ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
                             "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
                             "to encryption. Results may not reflect a fully secure configuration—consider testing "
                             "implicit TLS instead.", "VULN", not self.args.json)
+                    spinner_label[0] = "STARTTLS"
+                    result = self._execute_testssl_run(target, cache_dir, starttls_protocol=self.args.protocol)
 
-                cmd.append(domain)
-
-                subprocess.run(
-                    cmd,
-                    check=False,
-                    bufsize=1,
-                    universal_newlines=True,
-                    stdout=sys.stdout if self.args.verbose else subprocess.DEVNULL,
-                    stderr=sys.stderr if self.args.verbose else subprocess.DEVNULL
-                )
-
-                with open(temp_cache_file, "r") as f:
-                    result = json.load(f)
-
-                os.replace(temp_cache_file, final_cache_file)
+            if result is None:
+                self.ptjsonlib.end_error("testssl.sh did not produce any output.", self.args.json)
 
             return result
 
@@ -190,6 +153,63 @@ class PtSSL:
             if not self.args.verbose:
                 stop_spinner.set()
                 spinner_thread.join()
+
+    def _execute_testssl_run(self, target: str, cache_dir: str, starttls_protocol: str = None):
+        """
+        Runs testssl once against target with optional STARTTLS protocol.
+        Returns parsed JSON dict on success, or None on failure.
+        """
+        CACHE_EXPIRY_SECONDS = 30 * 60
+
+        cache_key = f"{target}:{'starttls_' + starttls_protocol if starttls_protocol else 'implicit'}"
+        hash_name = hashlib.md5(cache_key.encode("utf-8")).hexdigest()
+        final_cache_file = os.path.join(cache_dir, f"{hash_name}.json")
+        temp_cache_file = os.path.join(cache_dir, f"{hash_name}_{uuid.uuid4().hex}.tmp")
+
+        with self.acquire_testssl_lock(cache_key, cache_dir):
+            if os.path.exists(final_cache_file):
+                try:
+                    if (time.time() - os.path.getmtime(final_cache_file)) <= CACHE_EXPIRY_SECONDS:
+                        with open(final_cache_file, "r") as f:
+                            return json.load(f)
+                except Exception:
+                    try:
+                        os.remove(final_cache_file)
+                    except Exception:
+                        pass
+
+            if os.path.exists(temp_cache_file):
+                try:
+                    os.remove(temp_cache_file)
+                except Exception:
+                    pass
+
+            cmd = ["testssl", "--warnings", "batch", "--jsonfile", temp_cache_file]
+            if starttls_protocol:
+                cmd += ["--starttls", starttls_protocol]
+            cmd.append(target)
+
+            subprocess.run(
+                cmd,
+                check=False,
+                bufsize=1,
+                universal_newlines=True,
+                stdout=sys.stdout if self.args.verbose else subprocess.DEVNULL,
+                stderr=sys.stderr if self.args.verbose else subprocess.PIPE
+            )
+
+            if not os.path.exists(temp_cache_file) or os.path.getsize(temp_cache_file) == 0:
+                return None
+
+            try:
+                with open(temp_cache_file, "r") as f:
+                    data = json.load(f)
+                if any(entry.get("id") == "scanTime" and "Scan interrupted" in entry.get("finding", "") for entry in data):
+                    return None
+                os.replace(temp_cache_file, final_cache_file)
+                return data
+            except Exception:
+                return None
 
     @contextmanager
     def acquire_testssl_lock(self, domain: str, cache_dir: str):
@@ -338,37 +358,42 @@ def get_help():
         {"usage": ["ptssl <options>"]},
         {"usage_example": [
             "ptssl -d https://www.example.com",
+            "ptssl -d mail.muni.cz --port 465",
+            "ptssl -d mail.muni.cz --port 465 --protocol smtp",
+            "ptssl -d mail.muni.cz --port 465 --implicittls",
+            "ptssl -d mail.muni.cz --port 465 --protocol smtp --starttls",
         ]},
         {"options": [
             ["-d",  "--domain",                    "<domain>",            "Connect to domain"],
-            ["-ts", "--tests",                  "<test>",     "Specify one or more tests to perform:"],
+            ["-po", "--port",                      "<port>",              "Target port (if omitted, default port is used)"],
+            ["-pr", "--protocol",                  "<protocol>",          "Application protocol (requires --port); enables STARTTLS fallback"],
+            ["-st", "--starttls",                  "",                    "Force STARTTLS (requires --protocol with a STARTTLS-capable protocol)"],
+            ["-i",  "--implicittls",               "",                    "Force implicit TLS only (no STARTTLS fallback)"],
+            ["-ts", "--tests",                     "<test>",              "Specify one or more tests to perform:"],
             *_get_available_modules_help(),
-            ["-st", "--starttls", "<protocol>",
-             "STARTTLS protocol (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)"],
-            ["-t",  "--threads",                "<threads>",        "Set thread count (default 10)"],
-            ["-vv", "--verbose",                "",                 "Show verbose output"],
-            ["-v",  "--version",                "",                 "Show script version and exit"],
-            ["-h",  "--help",                   "",                 "Show this help message and exit"],
-            ["-j",  "--json",                   "",                 "Output in JSON format"],
+            ["-t",  "--threads",                   "<threads>",           "Set thread count (default 10)"],
+            ["-vv", "--verbose",                   "",                    "Show verbose output"],
+            ["-v",  "--version",                   "",                    "Show script version and exit"],
+            ["-h",  "--help",                      "",                    "Show this help message and exit"],
+            ["-j",  "--json",                      "",                    "Output in JSON format"],
         ]
         }]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help="False", description=f"{SCRIPTNAME} <options>")
-    parser.add_argument("-d",  "--domain",            type=str, required=True)
-    parser.add_argument("-ts", "--tests",          type=lambda s: s.lower(), nargs="+")
-    parser.add_argument("-t",  "--threads",        type=int, default=10)
-    parser.add_argument("-vv", "--verbose",        action="store_true")
-    parser.add_argument("-j",  "--json",           action="store_true")
-    parser.add_argument("-v",  "--version",        action='version', version=f'{SCRIPTNAME} {__version__}')
-    parser.add_argument("-st", "--starttls", type=str, default=None,
-                        choices=["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap"
-                                    , "nntp", "sieve", "postgres", "mysql"],
-                        help="STARTTLS protocol type")
-
-    parser.add_argument("--socket-address",          type=str, default=None)
-    parser.add_argument("--socket-port",             type=str, default=None)
-    parser.add_argument("--process-ident",           type=str, default=None)
+    parser.add_argument("-d",  "--domain",     type=str, required=True)
+    parser.add_argument("-po", "--port",       type=int, default=None)
+    parser.add_argument("-pr", "--protocol",   type=str, default=None)
+    parser.add_argument("-st", "--starttls",   action="store_true")
+    parser.add_argument("-i",  "--implicittls", action="store_true")
+    parser.add_argument("-ts", "--tests",      type=lambda s: s.lower(), nargs="+")
+    parser.add_argument("-t",  "--threads",    type=int, default=10)
+    parser.add_argument("-vv", "--verbose",    action="store_true")
+    parser.add_argument("-j",  "--json",       action="store_true")
+    parser.add_argument("-v",  "--version",    action='version', version=f'{SCRIPTNAME} {__version__}')
+    parser.add_argument("--socket-address",    type=str, default=None)
+    parser.add_argument("--socket-port",       type=str, default=None)
+    parser.add_argument("--process-ident",     type=str, default=None)
 
     if len(sys.argv) == 1 or "-h" in sys.argv or "--help" in sys.argv:
         ptprint(help_print(get_help(), SCRIPTNAME, __version__))
@@ -380,6 +405,20 @@ def parse_args() -> argparse.Namespace:
         ptjsonlib.PtJsonLib().end_error("The provided URL uses plain HTTP, which is not secured by SSL/TLS.",
         details="This tool is designed to test SSL/TLS configurations on HTTPS (SSL-secured) endpoints only.",
         condition=args.json)
+
+    if args.protocol and not args.port:
+        ptjsonlib.PtJsonLib().end_error("--protocol requires --port to be specified.", condition=args.json)
+
+    if args.starttls and args.implicittls:
+        ptjsonlib.PtJsonLib().end_error("--starttls and --implicittls cannot be used together.", condition=args.json)
+
+    if args.starttls and not args.protocol:
+        ptjsonlib.PtJsonLib().end_error("--starttls requires --protocol to be specified.", condition=args.json)
+
+    if args.starttls and args.protocol not in STARTTLS_PROTOCOLS:
+        ptjsonlib.PtJsonLib().end_error(
+            f"--starttls: protocol '{args.protocol}' is not supported by testssl. "
+            f"Supported protocols: {', '.join(STARTTLS_PROTOCOLS)}", condition=args.json)
 
     print_banner(SCRIPTNAME, __version__, args.json, 0)
     return args

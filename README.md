@@ -27,31 +27,39 @@ source ~/.zshrc
 
 ## Usage examples
 ```
-ptssl -d https://www.example.com/
-ptssl -d example.com
-ptssl -d ftp.example.com:21 --starttls ftp
+ptssl -d https://www.example.com
+ptssl -d mail.muni.cz --port 465
+ptssl -d mail.muni.cz --port 465 --protocol smtp
+ptssl -d mail.muni.cz --port 465 --implicittls
+ptssl -d mail.muni.cz --port 465 --protocol smtp --starttls
 ```
 
 ## Options
 ```
--d   --domain   <domain>   Connect to DOMAIN 
--ts  --tests    <test>     Specify one or more tests to perform:
-                BVT        Testing common vulnerabilities
-                CT         Testing for supported ciphers
-                FST        Testing if Forward Security is offered
-                GT         Testing for bugs
-                HSTS       Testing if HSTS is offered
-                HTTPR      Testing HTTP redirection
-                PCT        Testing who gives order of ciphers
-                PT         Testing for allowed protocols
-                TSD        Testing server defaults
--st --starttls <protocol>  Use STARTTLS for the specified protocol
-                           (ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server, telnet, ldap, nntp, sieve, postgres, mysql)
--t   --threads  <threads>  Set thread count (default 10)
--vv  --verbose             Show verbose output
--v   --version             Show script version and exit
--h   --help                Show this help message and exit
--j   --json                Output in JSON format
+-d   --domain      <domain>    Connect to domain
+-po  --port        <port>      Target port (if omitted, default port is used)
+-pr  --protocol    <protocol>  Application protocol (requires --port); enables STARTTLS fallback
+                               Supported protocols: ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server,
+                               telnet, ldap, nntp, sieve, postgres, mysql
+-st  --starttls                Force STARTTLS (requires --protocol with a STARTTLS-capable protocol)
+-i   --implicittls             Force implicit TLS only (no STARTTLS fallback)
+-ts  --tests       <test>      Specify one or more tests to perform:
+                   ALG         Testing for cipher suites algorithm
+                   BVT         Testing common vulnerabilities
+                   CT          Testing for supported ciphers
+                   FST         Testing if Forward Security is offered
+                   GT          Testing for bugs
+                   HSTS        Testing if HSTS is offered
+                   HTTPR       Testing HTTP redirection
+                   PCT         Testing who gives order of ciphers
+                   PT          Testing for allowed protocols
+                   SA          Testing server defaults
+                   TSD         Testing server defaults
+-t   --threads     <threads>   Set thread count (default 10)
+-vv  --verbose                 Show verbose output
+-v   --version                 Show script version and exit
+-h   --help                    Show this help message and exit
+-j   --json                    Output in JSON format
 ```
 
 ## Dependencies
