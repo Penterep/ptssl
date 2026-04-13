@@ -358,17 +358,18 @@ def get_help():
         {"usage": ["ptssl <options>"]},
         {"usage_example": [
             "ptssl -d https://www.example.com",
-            "ptssl -d mail.muni.cz --port 465",
-            "ptssl -d mail.muni.cz --port 465 --protocol smtp",
-            "ptssl -d mail.muni.cz --port 465 --implicittls",
-            "ptssl -d mail.muni.cz --port 465 --protocol smtp --starttls",
+            "ptssl -d example.com --port 465",
+            "ptssl -d example.com --port 465 --protocol smtp",
+            "ptssl -d example.com --port 465 --implicittls",
+            "ptssl -d example.com --port 587 --protocol smtp --starttls",
         ]},
         {"options": [
             ["-d",  "--domain",                    "<domain>",            "Connect to domain"],
             ["-po", "--port",                      "<port>",              "Target port (if omitted, default port is used)"],
             ["-pr", "--protocol",                  "<protocol>",          "Application protocol (requires --port); enables STARTTLS fallback"],
+            ["",    "",                            "",                    "Supported protocols: ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server,telnet, ldap, nntp, sieve, postgres, mysql"],
             ["-st", "--starttls",                  "",                    "Force STARTTLS (requires --protocol with a STARTTLS-capable protocol)"],
-            ["-i",  "--implicittls",               "",                    "Force implicit TLS only (no STARTTLS fallback)"],
+            ["-it",  "--implicittls",              "",                    "Force implicit TLS only (no STARTTLS fallback)"],
             ["-ts", "--tests",                     "<test>",              "Specify one or more tests to perform:"],
             *_get_available_modules_help(),
             ["-t",  "--threads",                   "<threads>",           "Set thread count (default 10)"],
@@ -385,7 +386,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-po", "--port",       type=int, default=None)
     parser.add_argument("-pr", "--protocol",   type=str, default=None)
     parser.add_argument("-st", "--starttls",   action="store_true")
-    parser.add_argument("-i",  "--implicittls", action="store_true")
+    parser.add_argument("-it",  "--implicittls", action="store_true")
     parser.add_argument("-ts", "--tests",      type=lambda s: s.lower(), nargs="+")
     parser.add_argument("-t",  "--threads",    type=int, default=10)
     parser.add_argument("-vv", "--verbose",    action="store_true")
