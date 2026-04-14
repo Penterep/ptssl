@@ -148,11 +148,12 @@ class PtSSL:
             self.ptjsonlib.end_error("testssl.sh raised exception:", details=e, condition=self.args.json)
 
         finally:
-            if not self.args.json:
-                sys.stdout.write("\033[?25h")  # Show cursor
             if not self.args.verbose:
                 stop_spinner.set()
                 spinner_thread.join()
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")  # Show cursor
+                sys.stdout.flush()
 
     def _execute_testssl_run(self, target: str, cache_dir: str, starttls_protocol: str = None):
         """
