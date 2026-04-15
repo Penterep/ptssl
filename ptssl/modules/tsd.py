@@ -73,7 +73,7 @@ class TSD:
         """
         id_section = self._find_section_tsd()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide server's default section", self.args.json)
+            ptprint("testssl could not provide server's default section", "WARNING", not self.args.json, indent=4)
             return
 
         id_of_vulnerability = [self.CERT_SIG_ALGO, self.CERT_KEY_SIZE, self.CERT_CHAIN_OF_TRUST, self.CERT_TRUST,

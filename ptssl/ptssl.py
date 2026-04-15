@@ -29,6 +29,8 @@ import hashlib
 import sys; sys.path.append(__file__.rsplit("/", 1)[0])
 import fcntl
 import uuid
+import requests
+
 
 from io import StringIO
 from types import ModuleType
@@ -45,8 +47,6 @@ from helpers._thread_local_stdout import ThreadLocalStdout
 from helpers.helpers import Helpers
 from _version import __version__
 
-import requests
-
 STARTTLS_PROTOCOLS = ["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap", "nntp", "sieve", "postgres", "mysql"]
 
 
@@ -61,7 +61,6 @@ class PtSSL:
 
         self.testssl_result = self._run_testssl(args.domain)
 
-        # Activate ThreadLocalStdout stdout proxy
         self.thread_local_stdout = ThreadLocalStdout(sys.stdout)
         self.thread_local_stdout.activate()
 
@@ -106,6 +105,12 @@ class PtSSL:
         hostname = domain.split("://")[-1].rstrip("/")
         target = f"{hostname}:{self.args.port}" if self.args.port else hostname
 
+        if self.args.starttls:
+            ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
+                    "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
+                    "to encryption. Results may not reflect a fully secure configuration—consider testing "
+                    "implicit TLS instead.", "VULN", not self.args.json)
+
         if not self.args.verbose:
             if not self.args.json:
                 sys.stdout.write("\033[?25l")  # Hide cursor
@@ -121,23 +126,30 @@ class PtSSL:
                 result = self._execute_testssl_run(target, cache_dir)
             elif self.args.starttls:
                 spinner_label[0] = "STARTTLS"
-                ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
-                        "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
-                        "to encryption. Results may not reflect a fully secure configuration—consider testing "
-                        "implicit TLS instead.", "VULN", not self.args.json)
                 result = self._execute_testssl_run(target, cache_dir, starttls_protocol=self.args.protocol)
             else:
-                # Auto-detect: try implicit first, fallback to STARTTLS
                 spinner_label[0] = "implicit TLS"
                 result = self._execute_testssl_run(target, cache_dir)
                 if result is None:
+                    if not self.args.verbose:
+                        stop_spinner.set()
+                        spinner_thread.join()
                     ptprint("Implicit TLS failed, retrying with STARTTLS...", "WARNING", not self.args.json)
                     ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
                             "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
                             "to encryption. Results may not reflect a fully secure configuration—consider testing "
                             "implicit TLS instead.", "VULN", not self.args.json)
+                    if not self.args.verbose:
+                        stop_spinner = threading.Event()
+                        spinner_thread = threading.Thread(target=spinner_func, args=(stop_spinner,))
+                        ptprint(f" ", "TEXT", not self.args.json, end="\n", flush=True, clear_to_eol=True)
+                        spinner_thread.start()
                     spinner_label[0] = "STARTTLS"
                     result = self._execute_testssl_run(target, cache_dir, starttls_protocol=self.args.protocol)
+
+            if not self.args.verbose:
+                stop_spinner.set()
+                spinner_thread.join()
 
             if result is None:
                 self.ptjsonlib.end_error("testssl.sh did not produce any output.", self.args.json)
@@ -234,7 +246,6 @@ class PtSSL:
             try:
                 yield
             finally:
-                # lock automatically released when file is closed
                 pass
 
     def run_single_module(self, module_name: str) -> None:

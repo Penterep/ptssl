@@ -56,7 +56,7 @@ class ALG:
         """
         id_section = self._find_section_sa()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide Cipher algorithms section", self.args.json)
+            ptprint("testssl could not provide Cipher algorithms section", "WARNING", not self.args.json, indent=4)
             return
 
         secure_algs = []

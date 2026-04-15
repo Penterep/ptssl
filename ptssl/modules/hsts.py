@@ -38,7 +38,7 @@ class HSTS:
         ptprint(__TESTLABEL__, "TITLE", not self.args.json, colortext=True)
         try:
             http_url = "http://" + self.args.domain.split("://")[-1]
-            response = self.helpers.http_client.send_request(http_url, allow_redirects=True)
+            response = self.helpers.http_client.send_request(http_url, allow_redirects=True, timeout=10, max_retries=0)
             hsts_header = response.headers.get("strict-transport-security", None)
             if not hsts_header:
                 ptprint(f"{'Strict-Transport-Security header':<44} not offered", "VULN", not self.args.json, indent=4)

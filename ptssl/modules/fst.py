@@ -54,7 +54,7 @@ class FST:
         """
         id_fs = self._find_section_fs()
         if id_fs == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide FS section", self.args.json)
+            ptprint("testssl could not provide FS section", "WARNING", not self.args.json, indent=4)
             return
         item = self.testssl_result[id_fs]
 

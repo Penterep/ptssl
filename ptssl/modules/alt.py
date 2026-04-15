@@ -54,7 +54,7 @@ class ALT:
         """
         id_alt = self._find_section_alt()
         if id_alt == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide Alternative domain name section section", self.args.json)
+            ptprint("testssl could not provide Alternative domain name section", "WARNING", not self.args.json, indent=4)
             return
         item = self.testssl_result[id_alt]
 
