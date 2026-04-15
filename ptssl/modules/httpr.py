@@ -32,7 +32,7 @@ class HTTPR:
         ptprint(__TESTLABEL__, "TITLE", not self.args.json, colortext=True)
         try:
             http_url = "http://" + self.args.domain.split("://")[-1]
-            response = self.helpers.http_client.send_request(http_url, allow_redirects=False)
+            response = self.helpers.http_client.send_request(http_url, allow_redirects=False, timeout=10, max_retries=0)
         except:
             ptprint(f"Error retrieving response for HTTPR test", "ERROR", not self.args.json, indent=4)
             return

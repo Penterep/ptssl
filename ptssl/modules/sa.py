@@ -54,7 +54,7 @@ class SA:
         """
         id_section = self._find_section_sa()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide Signing algorithms section", self.args.json)
+            ptprint("testssl could not provide Signing algorithms section", "WARNING", not self.args.json, indent=4)
             return
 
         item = self.testssl_result[id_section]

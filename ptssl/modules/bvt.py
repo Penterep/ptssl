@@ -54,7 +54,7 @@ class BVT:
         """
         id_section = self._find_section_bv()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide vulnerability section", self.args.json)
+            ptprint("testssl could not provide vulnerability section", "WARNING", not self.args.json, indent=4)
             return
 
         for item in self.testssl_result[id_section:id_section + self.VULN_SEC_LEN]:

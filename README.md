@@ -28,10 +28,10 @@ source ~/.zshrc
 ## Usage examples
 ```
 ptssl -d https://www.example.com
-ptssl -d mail.muni.cz --port 465
-ptssl -d mail.muni.cz --port 465 --protocol smtp
-ptssl -d mail.muni.cz --port 465 --implicittls
-ptssl -d mail.muni.cz --port 465 --protocol smtp --starttls
+ptssl -d example.com --port 465
+ptssl -d example.com --port 465 --protocol smtp
+ptssl -d example.com --port 465 --implicittls
+ptssl -d example.com --port 587 --protocol smtp --starttls
 ```
 
 ## Options
@@ -42,7 +42,7 @@ ptssl -d mail.muni.cz --port 465 --protocol smtp --starttls
                                Supported protocols: ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server,
                                telnet, ldap, nntp, sieve, postgres, mysql
 -st  --starttls                Force STARTTLS (requires --protocol with a STARTTLS-capable protocol)
--i   --implicittls             Force implicit TLS only (no STARTTLS fallback)
+-it   --implicittls             Force implicit TLS only (no STARTTLS fallback)
 -ts  --tests       <test>      Specify one or more tests to perform:
                    ALG         Testing for cipher suites algorithm
                    BVT         Testing common vulnerabilities

@@ -55,7 +55,7 @@ class PT:
         """
         id_section = self._find_section_p()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide protocol section", self.args.json)
+            ptprint("testssl could not provide protocol section", "WARNING", not self.args.json, indent=4)
             return
 
         for item in self.testssl_result[id_section:id_section + self.PRO_SEC_LEN]:

@@ -56,7 +56,7 @@ class PCT:
         """
         id_section = self._find_section_pc()
         if id_section == self.ERROR_NUM:
-            self.ptjsonlib.end_error("testssl could not provide cipher order section", self.args.json)
+            ptprint("testssl could not provide cipher order section", "WARNING", not self.args.json, indent=4)
             return
 
         item = self.testssl_result[id_section]

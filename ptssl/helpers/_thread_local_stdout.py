@@ -32,7 +32,6 @@ class ThreadLocalStdout:
 
     def activate(self):
         sys.stdout = self
-        sys.stderr = self
 
     def set_thread_buffer(self, buffer):
         """
