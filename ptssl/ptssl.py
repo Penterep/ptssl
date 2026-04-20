@@ -151,12 +151,21 @@ class PtSSL:
                 stop_spinner.set()
                 spinner_thread.join()
 
+            # Restore cursor on stdout before any potential end_error
+            # (end_error uses os._exit which bypasses the finally block)
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")
+                sys.stdout.flush()
+
             if result is None:
                 self.ptjsonlib.end_error("testssl.sh did not produce any output.", self.args.json)
 
             return result
 
         except subprocess.CalledProcessError as e:
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")
+                sys.stdout.flush()
             self.ptjsonlib.end_error("testssl.sh raised exception:", details=e, condition=self.args.json)
 
         finally:
