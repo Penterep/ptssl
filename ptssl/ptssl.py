@@ -30,7 +30,6 @@ import sys; sys.path.append(__file__.rsplit("/", 1)[0])
 import fcntl
 import uuid
 import requests
-
 from io import StringIO
 from types import ModuleType
 from urllib.parse import urlparse, urlunparse
@@ -67,7 +66,11 @@ class PtSSL:
 
     def run(self) -> None:
         """Main method"""
-        tests = self.args.tests or [m for m in MODULE_ORDER if m in _get_all_available_modules()]
+        available = _get_all_available_modules()
+        # HSTS and HTTP redirect tests only apply to default HTTPS (no --port/--protocol)
+        if self.args.port or self.args.protocol:
+            available = [m for m in available if m not in ("hsts", "httpr")]
+        tests = self.args.tests or [m for m in MODULE_ORDER if m in available]
         self._module_outputs = {}
         self.ptthreads.threads(list(tests), self.run_single_module, self.args.threads)
 
@@ -160,8 +163,6 @@ class PtSSL:
                 stop_spinner.set()
                 spinner_thread.join()
 
-            # Restore cursor on stdout before any potential end_error
-            # (end_error uses os._exit which bypasses the finally block)
             if not self.args.json:
                 sys.stdout.write("\033[?25h")
                 sys.stdout.flush()
