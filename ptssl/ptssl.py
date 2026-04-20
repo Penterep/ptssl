@@ -30,8 +30,6 @@ import sys; sys.path.append(__file__.rsplit("/", 1)[0])
 import fcntl
 import uuid
 import requests
-
-
 from io import StringIO
 from types import ModuleType
 from urllib.parse import urlparse, urlunparse
@@ -48,6 +46,8 @@ from helpers.helpers import Helpers
 from _version import __version__
 
 STARTTLS_PROTOCOLS = ["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap", "nntp", "sieve", "postgres", "mysql"]
+
+MODULE_ORDER = ["tsd", "alt", "pt", "alg", "sa", "pct", "ct", "fst", "gt", "bvt", "httpr", "hsts"]
 
 
 class PtSSL:
@@ -66,8 +66,20 @@ class PtSSL:
 
     def run(self) -> None:
         """Main method"""
-        tests = self.args.tests or _get_all_available_modules()
-        self.ptthreads.threads(tests, self.run_single_module, self.args.threads)
+        available = _get_all_available_modules()
+        # HSTS and HTTP redirect tests only apply to default HTTPS (no --port/--protocol)
+        if self.args.port or self.args.protocol:
+            available = [m for m in available if m not in ("hsts", "httpr")]
+        tests = self.args.tests or [m for m in MODULE_ORDER if m in available]
+        self._module_outputs = {}
+        self.ptthreads.threads(list(tests), self.run_single_module, self.args.threads)
+
+        # Print module outputs in the defined order
+        for module_name in tests:
+            output = self._module_outputs.get(module_name, "")
+            if output:
+                sys.stdout.write(output)
+                sys.stdout.flush()
 
         self.ptjsonlib.set_status("finished")
         ptprint(self.ptjsonlib.get_result_json(), "", self.args.json)
@@ -151,12 +163,19 @@ class PtSSL:
                 stop_spinner.set()
                 spinner_thread.join()
 
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")
+                sys.stdout.flush()
+
             if result is None:
                 self.ptjsonlib.end_error("testssl.sh did not produce any output.", self.args.json)
 
             return result
 
         except subprocess.CalledProcessError as e:
+            if not self.args.json:
+                sys.stdout.write("\033[?25h")
+                sys.stdout.flush()
             self.ptjsonlib.end_error("testssl.sh raised exception:", details=e, condition=self.args.json)
 
         finally:
@@ -279,13 +298,10 @@ class PtSSL:
 
                 except Exception as e:
                     ptprint(e, "ERROR", not self.args.json)
-                    error = e
-                else:
-                    error = None
                 finally:
                     self.thread_local_stdout.clear_thread_buffer()
                     with self._lock:
-                        ptprint(buffer.getvalue(), "TEXT", not self.args.json, end="\n")
+                        self._module_outputs[module_name] = buffer.getvalue()
             else:
                 ptprint(f"Module '{module_name}' does not have 'run' function", "WARNING", not self.args.json)
 

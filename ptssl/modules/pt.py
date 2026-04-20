@@ -69,7 +69,7 @@ class PT:
                 self.ptjsonlib.add_vulnerability(
                     f"PTV-WEB-MISC-{''.join(ch for ch in item['id'] if ch.isalnum()).upper()}"
                 )
-            elif item["severity"] in ["OK"]:
+            elif item["severity"] in ["OK"] or item["severity"] in ["INFO"]:
                 ptprint(f"{display_name:<43}  {item['finding']}", "OK", not self.args.json, indent=4)
             else:
                 ptprint(f"{display_name:<43}  {item['finding']}", "VULN", not self.args.json, indent=4)
