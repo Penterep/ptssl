@@ -143,13 +143,37 @@ DESCRIPTION_MAP = {
         "name": "TLS 1.3 Protocol",
         "description": "Indicates whether TLS 1.3 is offered (modern and secure, not supported here)."
     },
+    "cert_commonName": {
+        "name": "Common Name",
+        "description": "The Common Name (CN) in the server certificate, typically the primary domain name."
+    },
+    "cert_caIssuers": {
+        "name": "Issuer",
+        "description": "The Certificate Authority (CA) that issued the server certificate."
+    },
+    "cert_serialNumber": {
+        "name": "Serial Number",
+        "description": "Unique serial number assigned to the certificate by the issuing CA."
+    },
+    "cert_fingerprintSHA1": {
+        "name": "Fingerprint SHA1",
+        "description": "SHA1 fingerprint (hash) of the server certificate."
+    },
+    "cert_fingerprintSHA256": {
+        "name": "Fingerprint SHA256",
+        "description": "SHA256 fingerprint (hash) of the server certificate."
+    },
     "cert_signatureAlgorithm": {
-        "name": "Cert Signature Algorithm",
+        "name": "Signature Algorithm",
         "description": "The algorithm used to sign the server certificate."
     },
     "cert_keySize": {
         "name": "Certificate Key Size",
         "description": "Size and type of the server certificate key (e.g., RSA 2048 bits)."
+    },
+    "cert_notBefore": {
+        "name": "Certificate validity From",
+        "description": "The start date from which the server certificate is valid."
     },
     "cert_chain_of_trust": {
         "name": "Certificate Chain of Trust",
