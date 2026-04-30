@@ -104,7 +104,9 @@ class PtSSL:
                 sys.stdout.flush()
             while not stop_event.is_set():
                 label = f" ({spinner_label[0]})" if spinner_label[0] else ""
-                ptprint(get_colored_text(f"[{next(spinner)}] ", "TITLE") + f"Testssl is running{label}, please wait {next(spinner_dots)}", "TEXT", not self.args.json, end="\r", flush=True, clear_to_eol=True, colortext="TITLE")
+                ptprint(get_colored_text(
+                    f"[{next(spinner)}] ", "TITLE") + f"Testssl is running{label}, please wait {next(spinner_dots)}",
+                    "TEXT", not self.args.json, end="\r", flush=True, clear_to_eol=True, colortext="TITLE")
                 time.sleep(0.1)
             ptprint(" ", "TEXT", not self.args.json, flush=True, clear_to_eol=True)
 
