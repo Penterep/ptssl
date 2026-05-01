@@ -110,8 +110,10 @@ class PtSSL:
                 time.sleep(0.1)
             ptprint(" ", "TEXT", not self.args.json, flush=True, clear_to_eol=True)
 
-        if not shutil.which("testssl"):
+        testssl_bin = shutil.which("testssl") or shutil.which("testssl.sh")
+        if not testssl_bin:
             self.ptjsonlib.end_error("testssl.sh is not installed or not found in PATH. Please install it first via `sudo apt install testssl.sh`.", self.args.json)
+        self._testssl_bin = testssl_bin
 
         cache_dir = AppDirs("ptssl").get_data_dir()
         os.makedirs(cache_dir, exist_ok=True)
@@ -218,7 +220,7 @@ class PtSSL:
                 except Exception:
                     pass
 
-            cmd = ["testssl", "--warnings", "batch", "--jsonfile", temp_cache_file]
+            cmd = [self._testssl_bin, "--warnings", "batch", "--jsonfile", temp_cache_file]
             if starttls_protocol:
                 cmd += ["--starttls", starttls_protocol]
             cmd.append(target)
