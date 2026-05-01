@@ -37,13 +37,18 @@ class TSD:
     ERROR_NUM = -1
     CERT_SIG_ALGO = 0
     CERT_KEY_SIZE = 1
+    CERT_SERIAL = 4
+    CERT_FINGERPRINT_SHA1 = 6
+    CERT_FINGERPRINT_SHA256 = 7
+    CERT_COMMON_NAME = 9
     CERT_SUBJECTALTNAME = 11
     CERT_TRUST = 12
     CERT_CHAIN_OF_TRUST = 13
-    CERT_NOT_BEFORE = 17
-    CERT_NOT_AFTER  = 18
+    CERT_NOT_BEFORE = 16
+    CERT_NOT_AFTER  = 17
     OCSP_STAPLING = 22
     CERT_TRANSPARENCY = 25
+    CERT_ISSUER = 28
     DESCRIPTION_MAP = {}
 
     def __init__(self, args: object, ptjsonlib: object, helpers: object, testssl_result: dict) -> None:
@@ -76,9 +81,21 @@ class TSD:
             ptprint("testssl could not provide server's default section", "WARNING", not self.args.json, indent=4)
             return
 
-        id_of_vulnerability = [self.CERT_SIG_ALGO, self.CERT_KEY_SIZE, self.CERT_CHAIN_OF_TRUST, self.CERT_TRUST,
-                               self.CERT_NOT_BEFORE, self.CERT_NOT_AFTER, self.OCSP_STAPLING,
-                               self.CERT_TRANSPARENCY]
+        id_of_vulnerability = [
+            self.CERT_COMMON_NAME,
+            self.CERT_ISSUER,
+            self.CERT_SERIAL,
+            self.CERT_FINGERPRINT_SHA1,
+            self.CERT_FINGERPRINT_SHA256,
+            self.CERT_SIG_ALGO,
+            self.CERT_KEY_SIZE,
+            self.CERT_NOT_BEFORE,
+            self.CERT_NOT_AFTER,
+            self.CERT_CHAIN_OF_TRUST,
+            self.CERT_TRUST,
+            self.OCSP_STAPLING,
+            self.CERT_TRANSPARENCY,
+        ]
 
         cert_vuln_counter = 0
 

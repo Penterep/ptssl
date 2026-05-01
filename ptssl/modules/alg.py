@@ -46,6 +46,23 @@ class ALG:
             id_number += 1
         return self.ERROR_NUM
 
+    def _find_cipher_order_match(self, start: int, cert: str) -> int:
+        """
+        Find the index of the next cipher_order-{cert} item starting from `start`.
+        Looks ahead a few positions to skip non-matching metadata items
+        (e.g. prioritize_chacha_*) that testssl may emit between protocol sections.
+        Returns ERROR_NUM if no match is found within the lookahead window.
+        """
+        MAX_LOOKAHEAD = 5
+        for offset in range(MAX_LOOKAHEAD):
+            idx = start + offset
+            if idx >= len(self.testssl_result):
+                break
+            item_id = self.testssl_result[idx]["id"]
+            if item_id.startswith("cipher_order-") and item_id.endswith(cert):
+                return idx
+        return self.ERROR_NUM
+
     def _print_test_result(self) -> None:
         """
         Finds starting id of "cipher algorithms" section.
@@ -63,39 +80,47 @@ class ALG:
         weak_algs = []
         bad_order_protocols = []
 
-        item = self.testssl_result[id_section]
         current = id_section
-        for i in range(6):
-            if not item["id"].startswith("cipher_order-") or not item["id"].endswith(self.cert_list[i]):
+        for i in range(len(self.cert_list)):
+            match_idx = self._find_cipher_order_match(current, self.cert_list[i])
+            if match_idx == self.ERROR_NUM:
                 ptprint(f"{self.cert_print_list[i]}", "TEXT", not self.args.json, indent=4)
                 ptprint("-", "TEXT", not self.args.json, indent=8)
                 continue
 
+            current = match_idx
+            item = self.testssl_result[current]
+
             ptprint(f"{self.cert_print_list[i]}  order:{item['finding']}", item['severity'], not self.args.json, indent=4)
             current += 1
+            if current >= len(self.testssl_result):
+                break
             item = self.testssl_result[current]
 
             seen_weak = False
             bad_order = False
-            while not item["id"].startswith("cipherorder"):
-                alg_name = item['finding'].split(maxsplit=2)[2].split()[0]
-                if item["severity"] == "OK":
-                    ptprint(f"{alg_name}", "OK", not self.args.json, indent=8)
-                    secure_algs.append(alg_name)
-                    if seen_weak:
-                        bad_order = True
-                else:
-                    ptprint(f"{alg_name}", "WARNING", not self.args.json, indent=8)
-                    weak_algs.append(alg_name)
-                    seen_weak = True
+            while not item["id"].startswith("cipherorder") and not item["id"].startswith("cipher_order"):
+                if item["id"].startswith("cipher-"):
+                    alg_name = item['finding'].split(maxsplit=2)[2].split()[0]
+                    if item["severity"] == "OK":
+                        ptprint(f"{alg_name}", "OK", not self.args.json, indent=8)
+                        secure_algs.append(alg_name)
+                        if seen_weak:
+                            bad_order = True
+                    else:
+                        ptprint(f"{alg_name}", "WARNING", not self.args.json, indent=8)
+                        weak_algs.append(alg_name)
+                        seen_weak = True
                 current += 1
+                if current >= len(self.testssl_result):
+                    break
                 item = self.testssl_result[current]
 
             if bad_order:
                 bad_order_protocols.append(self.cert_print_list[i])
 
-            current += 1
-            item = self.testssl_result[current]
+            if item["id"].startswith("cipherorder"):
+                current += 1
 
         if weak_algs:
             description = ""
