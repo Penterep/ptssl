@@ -121,6 +121,10 @@ class PtSSL:
         hostname = domain.split("://")[-1].rstrip("/")
         target = f"{hostname}:{self.args.port}" if self.args.port else hostname
 
+        if self.args.yes:
+            ptprint("All testssl.sh warnings are disabled (--yes). The output may not be adequate.",
+                    "WARNING", not self.args.json)
+
         if self.args.starttls:
             ptprint("You are using STARTTLS. This mechanism upgrades a plaintext connection to TLS and "
                     "is vulnerable to downgrade (MITM) attacks,\n where an attacker can prevent the transition "
@@ -220,7 +224,8 @@ class PtSSL:
                 except Exception:
                     pass
 
-            cmd = [self._testssl_bin, "--warnings", "batch", "--jsonfile", temp_cache_file]
+            warnings_mode = "off" if self.args.yes else "batch"
+            cmd = [self._testssl_bin, "--warnings", warnings_mode, "--jsonfile", temp_cache_file]
             if starttls_protocol:
                 cmd += ["--starttls", starttls_protocol]
             cmd.append(target)
@@ -406,6 +411,7 @@ def get_help():
             *_get_available_modules_help(),
             ["-t",  "--threads",                   "<threads>",           "Set thread count (default 10)"],
             ["-vv", "--verbose",                   "",                    "Show verbose output"],
+            ["-y",  "--yes",                       "",                    "Skip all testssl.sh warnings (runs with --warnings off); output may not be adequate"],
             ["-v",  "--version",                   "",                    "Show script version and exit"],
             ["-h",  "--help",                      "",                    "Show this help message and exit"],
             ["-j",  "--json",                      "",                    "Output in JSON format"],
@@ -422,6 +428,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-ts", "--tests",      type=lambda s: s.lower(), nargs="+")
     parser.add_argument("-t",  "--threads",    type=int, default=10)
     parser.add_argument("-vv", "--verbose",    action="store_true")
+    parser.add_argument("-y",  "--yes",        action="store_true")
     parser.add_argument("-j",  "--json",       action="store_true")
     parser.add_argument("-v",  "--version",    action='version', version=f'{SCRIPTNAME} {__version__}')
     parser.add_argument("--socket-address",    type=str, default=None)
