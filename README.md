@@ -57,6 +57,7 @@ ptssl -d example.com --port 587 --protocol smtp --starttls
                    TSD         Testing server defaults
 -t   --threads     <threads>   Set thread count (default 10)
 -vv  --verbose                 Show verbose output
+-y   --yes                     Skip all testssl.sh warnings (runs with --warnings off); output may not be adequate
 -v   --version                 Show script version and exit
 -h   --help                    Show this help message and exit
 -j   --json                    Output in JSON format
