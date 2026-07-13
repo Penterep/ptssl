@@ -402,6 +402,7 @@ def get_help():
         ]},
         {"options": [
             ["-d",  "--domain",                    "<domain>",            "Connect to domain"],
+            ["-u",  "--url",                       "<url>",               "Alias for --domain"],
             ["-po", "--port",                      "<port>",              "Target port (if omitted, default port is used)"],
             ["-pr", "--protocol",                  "<protocol>",          "Application protocol (requires --port); enables STARTTLS fallback"],
             ["",    "",                            "",                    "Supported protocols: ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server,telnet, ldap, nntp, sieve, postgres, mysql"],
@@ -420,7 +421,7 @@ def get_help():
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help="False", description=f"{SCRIPTNAME} <options>")
-    parser.add_argument("-d",  "--domain",     type=str, required=True)
+    parser.add_argument("-d",  "--domain", "-u", "--url", type=str, required=True)
     parser.add_argument("-po", "--port",       type=int, default=None)
     parser.add_argument("-pr", "--protocol",   type=str, default=None)
     parser.add_argument("-st", "--starttls",   action="store_true")

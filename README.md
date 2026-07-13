@@ -37,6 +37,7 @@ ptssl -d example.com --port 587 --protocol smtp --starttls
 ## Options
 ```
 -d   --domain      <domain>    Connect to domain
+-u   --url         <url>       Alias for --domain
 -po  --port        <port>      Target port (if omitted, default port is used)
 -pr  --protocol    <protocol>  Application protocol (requires --port); enables STARTTLS fallback
                                Supported protocols: ftp, smtp, lmtp, pop3, imap, xmpp, xmpp-server,
