@@ -243,5 +243,9 @@ DESCRIPTION_MAP = {
         "name": "Signature Algorithms for SSLv3",
         "description": "Some signature algorithms are weak."
     },
+    "encryption": {
+        "name": "Encryption",
+        "description": "Indicates whether the service offers encrypted connection (implicit TLS or STARTTLS)."
+    },
 
 }
