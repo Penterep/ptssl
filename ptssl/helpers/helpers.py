@@ -17,6 +17,8 @@ class Helpers:
         self.args = args
         self.ptjsonlib = ptjsonlib
         self.http_client = http_client
+        # Mode in which target offers encryption ("implicit TLS" or "STARTTLS"), None if not offered
+        self.encryption = None
 
     def fetch(self, url, allow_redirects=False):
         """

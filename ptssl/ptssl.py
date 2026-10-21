@@ -26,6 +26,8 @@ import itertools
 import time
 import json
 import hashlib
+import socket
+import ssl
 import sys; sys.path.append(__file__.rsplit("/", 1)[0])
 import fcntl
 import uuid
@@ -47,7 +49,11 @@ from _version import __version__
 
 STARTTLS_PROTOCOLS = ["ftp", "smtp", "lmtp", "pop3", "imap", "xmpp", "xmpp-server", "telnet", "ldap", "nntp", "sieve", "postgres", "mysql"]
 
-MODULE_ORDER = ["tsd", "alt", "pt", "alg", "sa", "pct", "ct", "fst", "gt", "bvt", "httpr", "hsts"]
+MODULE_ORDER = ["encrypt", "tsd", "alt", "pt", "alg", "sa", "pct", "ct", "fst", "gt", "bvt", "httpr", "hsts"]
+
+# testssl findings meaning that the target does not offer encryption (implicit TLS or STARTTLS)
+NO_ENCRYPTION_FINDINGS = ["doesn't seem to be a TLS/SSL enabled server", "No STARTTLS found in handshake"]
+NOT_ENCRYPTED = "not_encrypted"
 
 
 class PtSSL:
@@ -71,6 +77,16 @@ class PtSSL:
         if self.args.port or self.args.protocol:
             available = [m for m in available if m not in ("hsts", "httpr")]
         tests = self.args.tests or [m for m in MODULE_ORDER if m in available]
+
+        # Without encryption only the ENCRYPT test is relevant
+        if not self.helpers.encryption:
+            if "encrypt" not in tests:
+                ptprint("Encryption is not offered by the target, tests are not relevant", "ERROR", not self.args.json)
+                self.ptjsonlib.set_status("irelevant")
+                ptprint(self.ptjsonlib.get_result_json(), "", self.args.json)
+                return
+            tests = ["encrypt"]
+
         self._module_outputs = {}
         self.ptthreads.threads(list(tests), self.run_single_module, self.args.threads)
 
@@ -93,6 +109,11 @@ class PtSSL:
         - --implicittls or no --protocol: implicit TLS only
         - --starttls: STARTTLS only (requires --protocol)
         - neither: try implicit first, fallback to STARTTLS if --protocol is provided
+
+        Implicit TLS is checked before testssl is started, so testssl is not run against a service
+        without encryption. The mode in which encryption is offered is stored in helpers.encryption,
+        if encryption is not offered it stays None and None is returned. None is returned also when
+        only the ENCRYPT test is requested and testssl does not have to be run.
         """
         spinner_label = [None]
 
@@ -120,6 +141,17 @@ class PtSSL:
 
         hostname = domain.split("://")[-1].rstrip("/")
         target = f"{hostname}:{self.args.port}" if self.args.port else hostname
+
+        # Quick check of implicit TLS (STARTTLS can't be checked this way, there testssl decides)
+        implicit_tls = None
+        if not self.args.starttls:
+            parsed = urlparse(domain if "://" in domain else f"//{domain}")
+            implicit_tls = self._check_implicit_tls(parsed.hostname, self.args.port or parsed.port or 443)
+            if implicit_tls is False and (self.args.implicittls or not self.args.protocol):
+                return None
+            if implicit_tls and set(self.args.tests or []) == {"encrypt"}:
+                self.helpers.encryption = "implicit TLS"
+                return None
 
         if self.args.yes:
             ptprint("All testssl.sh warnings are disabled (--yes). The output may not be adequate.",
@@ -149,8 +181,8 @@ class PtSSL:
                 result = self._execute_testssl_run(target, cache_dir, starttls_protocol=self.args.protocol)
             else:
                 spinner_label[0] = "implicit TLS"
-                result = self._execute_testssl_run(target, cache_dir)
-                if result is None:
+                result = NOT_ENCRYPTED if implicit_tls is False else self._execute_testssl_run(target, cache_dir)
+                if result is None or result == NOT_ENCRYPTED:
                     if not self.args.verbose:
                         stop_spinner.set()
                         spinner_thread.join()
@@ -178,6 +210,11 @@ class PtSSL:
             if result is None:
                 self.ptjsonlib.end_error("testssl.sh did not produce any output.", self.args.json)
 
+            if result == NOT_ENCRYPTED:
+                return None
+
+            # Spinner label holds the mode of the last testssl run
+            self.helpers.encryption = spinner_label[0] or "implicit TLS"
             return result
 
         except subprocess.CalledProcessError as e:
@@ -194,16 +231,60 @@ class PtSSL:
                 sys.stdout.write("\033[?25h")  # Show cursor
                 sys.stdout.flush()
 
+    def _check_implicit_tls(self, host: str, port: int):
+        """
+        Quickly checks whether the service offers implicit TLS by sending
+        a TLS ClientHello and inspecting the first byte of the reply.
+        Ends with error if it is not possible to connect to the service.
+
+        Returns:
+            True if the service replies with a TLS record (handshake or alert),
+            False if it replies with plaintext (e.g. service banner or HTTP error),
+            None if it can't be decided (no reply, timeout, binary reply), then testssl decides.
+        """
+        outgoing = ssl.MemoryBIO()
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        tls = context.wrap_bio(ssl.MemoryBIO(), outgoing, server_hostname=host)
+        try:
+            tls.do_handshake()
+        except ssl.SSLWantReadError:
+            pass  # ClientHello is ready in outgoing buffer
+
+        try:
+            sock = socket.create_connection((host, port), timeout=10)
+        except OSError as e:
+            self.ptjsonlib.end_error(f"Cannot connect to {host}:{port}", details=str(e), condition=self.args.json)
+
+        with sock:
+            try:
+                sock.sendall(outgoing.read())
+                reply = sock.recv(1)
+            except OSError:
+                return None
+
+        if reply in (b"\x15", b"\x16"):
+            return True
+        if not reply or reply[0] & 0x80:
+            return None
+        return False
+
     def _execute_testssl_run(self, target: str, cache_dir: str, starttls_protocol: str = None):
         """
         Runs testssl once against target with optional STARTTLS protocol.
-        Returns parsed JSON dict on success, or None on failure.
+        Returns parsed JSON dict on success, NOT_ENCRYPTED if the target does not offer
+        encryption, or None on failure.
+
+        The information that encryption is not offered is cached as well,
+        so other runs return it right away instead of waiting for testssl again.
         """
         CACHE_EXPIRY_SECONDS = 30 * 60
 
         cache_key = f"{target}:{'starttls_' + starttls_protocol if starttls_protocol else 'implicit'}"
         hash_name = hashlib.md5(cache_key.encode("utf-8")).hexdigest()
         final_cache_file = os.path.join(cache_dir, f"{hash_name}.json")
+        no_encryption_file = os.path.join(cache_dir, f"{hash_name}.noenc")
         temp_cache_file = os.path.join(cache_dir, f"{hash_name}_{uuid.uuid4().hex}.tmp")
 
         with self.acquire_testssl_lock(cache_key, cache_dir):
@@ -217,6 +298,9 @@ class PtSSL:
                         os.remove(final_cache_file)
                     except Exception:
                         pass
+
+            if os.path.exists(no_encryption_file) and (time.time() - os.path.getmtime(no_encryption_file)) <= CACHE_EXPIRY_SECONDS:
+                return NOT_ENCRYPTED
 
             if os.path.exists(temp_cache_file):
                 try:
@@ -239,18 +323,27 @@ class PtSSL:
                 stderr=sys.stderr if self.args.verbose else subprocess.PIPE
             )
 
-            if not os.path.exists(temp_cache_file) or os.path.getsize(temp_cache_file) == 0:
-                return None
-
             try:
+                if not os.path.exists(temp_cache_file) or os.path.getsize(temp_cache_file) == 0:
+                    return None
                 with open(temp_cache_file, "r") as f:
                     data = json.load(f)
+                if any(text in entry.get("finding", "") for entry in data for text in NO_ENCRYPTION_FINDINGS):
+                    open(no_encryption_file, "w").close()
+                    return NOT_ENCRYPTED
                 if any(entry.get("id") == "scanTime" and "Scan interrupted" in entry.get("finding", "") for entry in data):
                     return None
                 os.replace(temp_cache_file, final_cache_file)
                 return data
             except Exception:
                 return None
+            finally:
+                # Temp file is left only after failed run
+                if os.path.exists(temp_cache_file):
+                    try:
+                        os.remove(temp_cache_file)
+                    except Exception:
+                        pass
 
     @contextmanager
     def acquire_testssl_lock(self, domain: str, cache_dir: str):

@@ -48,6 +48,7 @@ ptssl -d example.com --port 587 --protocol smtp --starttls
                    ALG         Testing for cipher suites algorithm
                    BVT         Testing common vulnerabilities
                    CT          Testing for supported ciphers
+                   ENCRYPT     Testing if encryption is offered
                    FST         Testing if Forward Security is offered
                    GT          Testing for bugs
                    HSTS        Testing if HSTS is offered
